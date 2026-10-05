@@ -51,6 +51,7 @@ sem qualquer dependência de conexão com a internet.
 • app-pt.asar             -> Cópia compilada gerada localmente; não é necessária para instalar e fica fora do GitHub.
 • aplicar-traducao.ps1    -> Script PowerShell de instalação com barra de progresso.
 • restaurar-original.ps1  -> Script PowerShell de restauração do backup original modular.
+• CHANGELOG.md            -> Histórico de correções e alterações do projeto.
 • README.md               -> Guia completo em formato Markdown moderno (Português).
 • README.ag               -> Documento de metadados para Antigravity.
 • AGENTS_PTBR.md          -> Diretrizes operacionais para subagentes em Português.

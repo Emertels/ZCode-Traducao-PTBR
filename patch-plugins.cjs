@@ -85,111 +85,13 @@ const PLUGIN_STRING_REPLACEMENTS = {
     "Select and restore legacy ACP-era ZCode sessions into the new ZCode task and session store.": "Selecione e restaure sessões legadas da era ACP no novo armazenamento de tarefas e sessões do ZCode."
 };
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', 'cache', 'caches', 'tmp', 'temp', 'logs', 'log', 'export-log', 'crash', 'artifacts']);
-function walkAll(dir) {
-    const results = [];
-    let list;
-    try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-    for (const entry of list) {
-        if (entry.isSymbolicLink()) continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            if (SKIP_DIRS.has(entry.name.toLowerCase())) continue;
-            results.push(...walkAll(fullPath));
-        } else if (entry.isFile() && (entry.name === 'SKILL.md' || entry.name === 'visual-judge.md' || entry.name.endsWith('.json'))) {
-            results.push(fullPath);
-        }
-    }
-    return results;
-}
-
-// Pesquisar somente locais que guardam skills/plugins; ignorar historicos, caches e areas de trabalho.
-const targetDirs = [
-    path.join(zcodeUserDir, 'skills'),
-    path.join(zcodeUserDir, 'plugins'),
-    path.join(zcodeUserDir, 'cli', 'plugins', 'marketplaces'),
-    path.join(zcodeUserDir, 'plugin-workspace'),
-    zcodeGlmDir
-];
-let allFiles = [];
-for (const td of targetDirs) {
-    if (!fs.existsSync(td)) continue;
-    console.log('[*] Verificando skills/plugins em:', td);
-    allFiles.push(...walkAll(td));
-}
-console.log(`[+] Arquivos candidatos encontrados: ${allFiles.length}`);
-let count = 0;
-
-for (let fileIndex = 0; fileIndex < allFiles.length; fileIndex++) {
-    if (fileIndex > 0 && fileIndex % 250 === 0) console.log(`[+] Processados ${fileIndex}/${allFiles.length} arquivos...`);
-    const f = allFiles[fileIndex];
-    // A. Traduzir SKILL.md
-    if (f.endsWith('SKILL.md')) {
-        try {
-            let content = fs.readFileSync(f, 'utf8');
-            let updated = false;
-
-            const nameMatch = content.match(/^name:\s*([^\r\n]+)/m);
-            const skillName = nameMatch ? nameMatch[1].trim() : path.basename(path.dirname(f));
-
-            if (SKILL_TRANSLATIONS[skillName]) {
-                const ptDesc = SKILL_TRANSLATIONS[skillName];
-                const descMatch = content.match(/^description:\s*\"?([^\r\n\"]+)\"?/m);
-                if (descMatch && descMatch[1] !== ptDesc) {
-                    content = content.replace(/^description:\s*([^\r\n]+)/m, `description: "${ptDesc}"`);
-                    updated = true;
-                }
-            }
-
-            if (updated) {
-                preserveBeforeWrite(f, versionBackupDir);
-                fs.writeFileSync(f, content, 'utf8');
-                count++;
-                console.log(`[OK] Traduzido SKILL.md (${skillName}) em:`, f);
-            }
-        } catch (e) {}
-    }
-
-    // B. Traduzir visual-judge.md
-    if (f.endsWith('visual-judge.md')) {
-        try {
-            let content = fs.readFileSync(f, 'utf8');
-            const oldPrefix = 'description: "THE single visual acceptance pass';
-            if (content.includes(oldPrefix)) {
-                const lineEnd = content.indexOf('\n', content.indexOf(oldPrefix));
-                const newDesc = 'description: "Revisor de aceitação visual exclusivo para entregáveis renderizados (pptx, docx, xlsx, pdf, pôster e gráficos). Use-o em vez de inspecionar as imagens manualmente."';
-                content = content.substring(0, content.indexOf(oldPrefix)) + newDesc + content.substring(lineEnd);
-                preserveBeforeWrite(f, versionBackupDir);
-                fs.writeFileSync(f, content, 'utf8');
-                count++;
-                console.log('[OK] Traduzido visual-judge em:', f);
-            }
-        } catch (e) {}
-    }
-
-    // C. Traduzir manifestos de plugins e catálogos de marketplace
-    if (f.endsWith('.json')) {
-        try {
-            let content = fs.readFileSync(f, 'utf8');
-            let updated = false;
-
-            for (const [oldEn, newPt] of Object.entries(PLUGIN_STRING_REPLACEMENTS)) {
-                if (content.includes(oldEn)) {
-                    content = content.replaceAll(oldEn, newPt);
-                    updated = true;
-                }
-            }
-
-            if (updated) {
-                preserveBeforeWrite(f, versionBackupDir);
-                fs.writeFileSync(f, content, 'utf8');
-                count++;
-                console.log('[OK] Traduzido manifesto/json em:', f);
-            }
-        } catch (e) {}
-    }
-}
-
-console.log(`====================================================================`);
-console.log(`[+] Total de arquivos de skills e plugins traduzidos: ${count}`);
-console.log(`====================================================================`);
+// Restaura somente textos traduzidos por versões anteriores deste patch, usando backups por versão.
+const SKIP_DIRS = new Set(['.git','node_modules','cache','caches','tmp','temp','logs','log','export-log','crash','artifacts']);
+const manifestFile=versionBackupDir?path.join(versionBackupDir,'auxiliary-manifest.json'):null; let backupRecords=[];
+try{if(manifestFile&&fs.existsSync(manifestFile))backupRecords=JSON.parse(fs.readFileSync(manifestFile,'utf8'));}catch{}
+function backupFor(target){const r=backupRecords.find(x=>x.path&&path.resolve(x.path).toLowerCase()===path.resolve(target).toLowerCase());if(!r||!r.existed||!r.backupRelativePath)return null;const root=path.resolve(versionBackupDir),b=path.resolve(root,r.backupRelativePath);return b.toLowerCase().startsWith((root+path.sep).toLowerCase())&&fs.existsSync(b)?b:null;}
+function restoreJson(a,b){let changed=false;if(Array.isArray(a)&&Array.isArray(b)){for(let i=0;i<Math.min(a.length,b.length);i++){const x=restoreJson(a[i],b[i]);if(x.changed){a[i]=x.value;changed=true;}}}else if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)){for(const k of Object.keys(a))if(Object.hasOwn(b,k)){const x=restoreJson(a[k],b[k]);if(x.changed){a[k]=x.value;changed=true;}}}else if(typeof a==='string'&&typeof b==='string'&&PLUGIN_STRING_REPLACEMENTS[b]===a)return{value:b,changed:true};return{value:a,changed};}
+function restorePriorPatch(file){const b=backupFor(file);if(!b)return false;try{const cur=fs.readFileSync(file,'utf8'),orig=fs.readFileSync(b,'utf8');if(file.endsWith('.json')){const a=JSON.parse(cur),o=JSON.parse(orig),r=restoreJson(a,o);if(r.changed){fs.writeFileSync(file,JSON.stringify(a,null,2)+'\n','utf8');return true;}return false;}if(file.endsWith('SKILL.md')||file.endsWith('visual-judge.md')){const cm=cur.match(/^description:\s*(.*?)\s*$/m),om=orig.match(/^description:\s*(.*?)\s*$/m);if(!cm||!om)return false;const value=cm[1].replace(/^['\"]|['\"]$/g,'');const originals=[...Object.values(SKILL_TRANSLATIONS),'Revisor de aceitação visual exclusivo para entregáveis renderizados (pptx, docx, xlsx, pdf, pôster e gráficos). Use-o em vez de inspecionar as imagens manualmente.'];if(!originals.includes(value))return false;fs.writeFileSync(file,cur.replace(/^description:.*$/m,'description: '+om[1]),'utf8');return true;}}catch{}return false;}
+function walkAll(dir){let out=[],list;try{list=fs.readdirSync(dir,{withFileTypes:true});}catch{return out;}for(const e of list){if(e.isSymbolicLink())continue;const f=path.join(dir,e.name);if(e.isDirectory()){if(!SKIP_DIRS.has(e.name.toLowerCase()))out.push(...walkAll(f));}else if(e.isFile()&&(e.name==='SKILL.md'||e.name==='visual-judge.md'||e.name.endsWith('.json')))out.push(f);}return out;}
+const targetDirs=[path.join(zcodeUserDir,'skills'),path.join(zcodeUserDir,'plugins'),path.join(zcodeUserDir,'cli','plugins','marketplaces'),path.join(zcodeUserDir,'cli','plugins','cache'),path.join(zcodeUserDir,'plugin-workspace'),zcodeGlmDir];let files=[];for(const d of targetDirs)if(fs.existsSync(d))files.push(...walkAll(d));let restored=0;for(const f of files)if(restorePriorPatch(f)){restored++;console.log('[OK] Restaurados textos previamente traduzidos:',f);}
+console.log('[+] Arquivos restaurados para o idioma original: '+restored);console.log('[+] O patch não grava traduções nos arquivos locais; a tradução é aplicada conforme o idioma ativo na interface.');

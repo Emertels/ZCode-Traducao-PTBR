@@ -1,6 +1,6 @@
 # 🤖 ZCode — Tradução para Português do Brasil (PT-BR) 🇧🇷
 
-![Versão](https://img.shields.io/badge/Versão-v1.0.0-teal?style=for-the-badge)
+![Versão](https://img.shields.io/badge/Versão-v1.1.0-teal?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/Idioma-Português%20(Brasil)-green?style=for-the-badge)
 
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
@@ -84,6 +84,7 @@ Diferente de métodos manuais que substituem o `app.asar` por uma versão antiga
 │   └── verify-clean-asar.cjs
 ├── pt_dictionary.json       # Dicionário mestre com 7.600+ expressões mapeadas
 ├── app-pt.asar              # Gerado localmente; não distribuir sem autorização do titular
+├── CHANGELOG.md             # Histórico das correções e alterações do projeto
 ├── README.md                # Este manual em formato Markdown moderno
 ├── README.ag                # Documento de metadados para Antigravity
 ├── AGENTS_PTBR.md           # Diretrizes operacionais para subagentes em Português

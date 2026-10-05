@@ -220,37 +220,36 @@ if (mainCode.includes(aboutCredit)) {
     console.warn("[!] O ponto de inserção do crédito não foi localizado no diálogo Sobre desta compilação.");
 }
 
-// Traduzir SF: Explorador de arquivos (ao invés do chinês \u8D44\u6E90\u7BA1\u7406\u5668)
-if (mainCode.includes('\\u8D44\\u6E90\\u7BA1\\u7406\\u5668')) {
-    mainCode = mainCode.replace(/\\u8D44\\u6E90\\u7BA1\\u7406\\u5668/g, 'Explorador de Arquivos');
-    console.log("    -> Traduzido 'Explorador de Arquivos' no seletor de editores externos.");
-}
-
-// Traduzir mensagens de Sobre em Jb (tornando tudo PT-BR independente de locale)
+// Preservar o rótulo original do seletor de editores externos: uma troca
+// estática por português fazia o nome permanecer traduzido no locale inglês.
+// Traduzir mensagens de Sobre somente em pt-BR, preservando os catálogos originais.
 const ptAboutObj = '{aboutTitle:"Sobre o ZCode",versionLabel:"versão",okButtonLabel:"OK",optimizedForAppleSilicon:"Otimizado para Apple Silicon.",copyright:s(e=>`Todos os direitos reservados \\xA9 ${e} ZCode.`,"copyright")}';
 const jbNeedle = 'Jb={"zh-CN":';
 const jbIdx = mainCode.indexOf(jbNeedle);
 if (jbIdx !== -1) {
     const jbEnd = mainCode.indexOf(';function Be(', jbIdx);
     if (jbEnd !== -1) {
-        const newJb = `Jb={"zh-CN":${ptAboutObj},"en-US":${ptAboutObj},"pt-BR":${ptAboutObj}}`;
+        const originalJb = mainCode.slice(jbIdx, jbEnd);
+        const newJb = `${originalJb.slice(0, -1)},"pt-BR":${ptAboutObj}}`;
         mainCode = mainCode.substring(0, jbIdx) + newJb + mainCode.substring(jbEnd);
-        console.log("    -> Janela Sobre traduzida para PT-BR em todos os locales!");
+        console.log("    -> Janela Sobre traduzida em pt-BR; catálogos en-US e zh-CN preservados.");
     }
 }
 
 // Traduzir menu de contexto da bandeja do sistema (Windows Tray)
 const trayLabelNeedle = 'let t=s(i=>Mt(e.getLocale(),i),"getLabel")';
 if (mainCode.includes(trayLabelNeedle)) {
-    const ptTrayMapCode = `const _ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","ZCode":"ZCode"};let t=s(i=>{let val=Mt(e.getLocale(),i);return _ptTrayMap[val]||val},"getLabel")`;
+    const ptTrayMapCode = `const _ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale(),t=s(i=>{let val=Mt(locale,i);return locale==="pt-BR"?(_ptTrayMap[val]||val):val},"getLabel")`;
     mainCode = mainCode.replace(trayLabelNeedle, ptTrayMapCode);
     console.log("    -> Menu da bandeja do sistema (System Tray) traduzido para PT-BR.");
 }
 
-// Traduzir indicador flutuante de Computer Use
-if (mainCode.includes('indicatorCopy')) {
-    mainCode = mainCode.replace(/\{text:[^}]+width:234\}:\{text:"ZCode is controlling your computer",width:308\}/, '{text:"ZCode está controlando seu computador",width:330}:{text:"ZCode está controlando seu computador",width:330}');
-    console.log("    -> Indicador de Computer Use traduzido para PT-BR.");
+// Traduzir indicador de Computer Use apenas no locale pt-BR.
+const indicatorOriginal = 'function hC(e){return e==="zh-CN"?{text:"ZCode \\u6B63\\u5728\\u64CD\\u4F5C\\u7535\\u8111",width:234}:{text:"ZCode is controlling your computer",width:308}}';
+const indicatorLocalized = 'function hC(e){return e==="zh-CN"?{text:"ZCode \\u6B63\\u5728\\u64CD\\u4F5C\\u7535\\u8111",width:234}:e==="pt-BR"?{text:"ZCode está controlando seu computador",width:330}:{text:"ZCode is controlling your computer",width:308}}';
+if (mainCode.includes(indicatorOriginal)) {
+    mainCode = mainCode.replace(indicatorOriginal, indicatorLocalized);
+    console.log("    -> Indicador de Computer Use traduzido somente em pt-BR.");
 }
 
 // A.1 Patch out/main/chunk-*.js (Modulo de Menus da Barra de Titulo, Dock e Bandeja)
@@ -316,18 +315,14 @@ if (desktopMenuChunkCode) {
     const endIdx = desktopMenuChunkCode.indexOf('}};function ik', startIdx);
     if (startIdx !== -1 && endIdx !== -1) {
         const ptStr = JSON.stringify(ptDesktopMenu);
-        const newEh = `eh={"zh-CN":${ptStr},"en-US":${ptStr},"pt-BR":${ptStr}}`;
+        const newEh = `${desktopMenuChunkCode.slice(startIdx, endIdx + 1)},"pt-BR":${ptStr}}`;
         desktopMenuChunkCode = desktopMenuChunkCode.substring(0, startIdx) + newEh + desktopMenuChunkCode.substring(endIdx + 2);
-        console.log("    -> Mapeamento completo de menus do sistema e bandeja injetado em PT-BR!");
+        console.log("    -> Menus do sistema traduzidos somente em pt-BR; en-US e zh-CN preservados.");
     }
 
     desktopMenuChunkCode = desktopMenuChunkCode.replace(
         'function ik(t,n){return(eh[t]??eh[fs])[n]}',
-        'function ik(t,n){return(eh[t]??eh["pt-BR"]??eh[fs])[n]}'
-    );
-    desktopMenuChunkCode = desktopMenuChunkCode.replace(
-        'var fs="zh-CN"',
-        'var fs="pt-BR"'
+        'function ik(t,n){return(eh[t]??eh[fs]??eh["en-US"])[n]}'
     );
 }
 
@@ -401,6 +396,8 @@ if (h0Start !== -1 && y0Start !== -1) {
             str = (isZh ? e.cn : e.en) || (isZh ? e.en : e.cn) || "";
         }
         str = (str || "").trim();
+        const isPt = t?.toLowerCase().startsWith("pt") ?? false;
+        if (!isPt) return str || (typeof e === "string" ? e : (e.en || e.cn || ""));
         const map = {
             "Morning dev brief": "Resumo matinal de desenvolvimento",
             "Risk scan": "Varredura de riscos",
@@ -454,36 +451,27 @@ if (h0Start !== -1 && y0Start !== -1) {
     console.log("    -> Injetado mapeamento universal em PT-BR para templates de automações e tarefas em styles.");
 }
 
-// B.1 Patch out/host/index.js (Descrições dos subagentes built-in general-purpose e Explore)
-console.log("[*] Aplicando patch no host do backend: out/host/index.js");
+// B.1 Manter textos originais do host; a tradução condicional é aplicada no DOM em pt-BR.
+console.log("[*] Mantidos os textos originais do host; descrições e erros são traduzidos condicionalmente no DOM.");
 let hostCode = getCleanFile("out/host/index.js");
-if (hostCode) {
-    const oldGenDesc = 'description:"General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks."';
-    const newGenDesc = 'description:"Agente de uso geral para pesquisar questões complexas, buscar código e executar tarefas de várias etapas."';
-    const oldExpDesc = 'description:"Read-only search agent for broad fan-out searches."';
-    const newExpDesc = 'description:"Agente de pesquisa somente leitura para buscas abrangentes e distribuídas."';
-    
-    if (hostCode.includes(oldGenDesc)) {
-        hostCode = hostCode.replace(oldGenDesc, newGenDesc);
-        console.log("    -> Descrição do agente 'general-purpose' traduzida em out/host/index.js.");
-    }
-    if (hostCode.includes(oldExpDesc)) {
-        hostCode = hostCode.replace(oldExpDesc, newExpDesc);
-        console.log("    -> Descrição do agente 'Explore' traduzida em out/host/index.js.");
-    }
-    if (hostCode.includes("Account request credential is unavailable: ")) {
-        hostCode = hostCode.replaceAll("Account request credential is unavailable: ", "A credencial de solicitação da conta não está disponível: ");
-        console.log("    -> Mensagem de erro de credencial de conta traduzida em out/host/index.js.");
-    }
+// A API de campanhas aceita somente en-US e zh-CN. Mantemos pt-BR na interface,
+// mas consultamos a API de bônus com en-US e aceitamos pt-BR no relatório de resgate.
+const marketingLocaleEnum = 'var AN=_.enum(["zh-CN","en-US"])';
+const marketingLocaleHeader = '"X-Client-Language":AN.parse(o)';
+if (hostCode && hostCode.includes(marketingLocaleEnum) && hostCode.includes(marketingLocaleHeader)) {
+    hostCode = hostCode.replace(marketingLocaleEnum, 'var AN=_.enum(["zh-CN","en-US","pt-BR"])');
+    hostCode = hostCode.replace(marketingLocaleHeader, '"X-Client-Language":AN.parse(o==="pt-BR"?"en-US":o)');
+    console.log("    -> Bônus: consultas e resgates pt-BR usam en-US somente no cabeçalho da API de campanhas.");
+} else {
+    console.warn("[!] API de campanhas mudou; o fallback de locale do bônus não foi aplicado.");
 }
 
-// B.2 Patch out/host/chunk-*.js (Nome padrão 'New Group' -> 'Novo Grupo')
+// B.2 Manter 'New Group' no host; o DOM o traduz para 'Novo grupo' somente em pt-BR.
 const cHostNode = cleanHeader.files.out.files.host.files;
 const hostGroupChunkName = Object.keys(cHostNode).find(f => f.startsWith("chunk-") && f.endsWith(".js") && getCleanFile("out/host/" + f)?.includes('"New Group"'));
 let chunkHostCode = hostGroupChunkName ? getCleanFile("out/host/" + hostGroupChunkName) : null;
 if (chunkHostCode) {
-    chunkHostCode = chunkHostCode.replace(/"New Group"/g, '"Novo grupo"');
-    console.log(`    -> Nome padrão 'Novo grupo' traduzido dinamicamente em out/host/${hostGroupChunkName}.`);
+    console.log(`    -> Nome original 'New Group' preservado em out/host/${hostGroupChunkName}; tradução condicional no DOM.`);
 }
 
 // C. Patch out/renderer/assets/IntlProvider-*.js
@@ -495,6 +483,24 @@ if (!intlFileName) {
 console.log(`[*] Aplicando patch no provedor de internacionalizacao: out/renderer/assets/${intlFileName}`);
 let intlCode = getCleanFile("out/renderer/assets/" + intlFileName);
 
+// Fazer "Padrão do sistema" reconhecer Português quando o sistema operacional usa pt-*.
+const systemLocaleResolver = 'm=(0,i.useCallback)(()=>{let e=f();return e?e.toLowerCase().startsWith(`zh`)?`zh-CN`:`en-US`:t},[])';
+const localizedSystemLocaleResolver = 'm=(0,i.useCallback)(()=>{let e=f();if(!e)return t;e=e.toLowerCase();return e.startsWith(`zh`)?`zh-CN`:e.startsWith(`pt`)?`pt-BR`:`en-US`},[])';
+if (intlCode.includes(systemLocaleResolver)) {
+    intlCode = intlCode.replace(systemLocaleResolver, localizedSystemLocaleResolver);
+    console.log("    -> 'Padrão do sistema' agora resolve os idiomas pt-* para pt-BR.");
+} else {
+    console.warn("[!] O resolvedor de idioma do sistema mudou; não foi possível habilitar automaticamente o locale pt-BR.");
+}
+const systemLocaleService = 'g=(0,i.useCallback)(async()=>{let e=await s?.();return y(e)?e:m()},[s,m])';
+const localizedSystemLocaleService = 'g=(0,i.useCallback)(async()=>{let e=f();if(e?.toLowerCase().startsWith(`pt`))return`pt-BR`;let n=await s?.();return y(n)?n:m()},[s,m])';
+if (intlCode.includes(systemLocaleService)) {
+    intlCode = intlCode.replace(systemLocaleService, localizedSystemLocaleService);
+    console.log("    -> Prioridade do idioma pt-* do sistema sobre fallback en-US do serviço do ZCode.");
+} else {
+    console.warn("[!] O serviço de idioma do sistema mudou; confirme a resolução de pt-BR após atualizar o ZCode.");
+}
+
 const matchCleanG = intlCode.match(/g=\{"zh-CN":(\w+),"en-US":(\w+)\}/);
 if (matchCleanG) {
     const fullG = matchCleanG[0];
@@ -502,8 +508,8 @@ if (matchCleanG) {
     const enVar = matchCleanG[2];
     const dictJson = JSON.stringify(dict);
     
-    // Injetar dicionário PT-BR mapeado para pt-BR e en-US (para tradução 100% ativa sem fallback quebrado)
-    const injection = `pt=Object.assign({},${enVar},${dictJson}),g={"zh-CN":Object.assign({},${zhVar},{"settings.locale.pt-BR":"Português (Brasil)","sidebar.settings.locale.pt-BR":"Português (Brasil)","updateDialog.availableTitle":"Nova versão v{version}","updateDialog.downloadingTitle":"Baixando v{version}","updateDialog.readyTitle":"v{version} está pronto","updateDialog.downloadAndUpdate":"Baixar atualização","updateDialog.cancelDownload":"Cancelar download","updateDialog.autoDownloadAndInstall":"Baixar e instalar atualizações automaticamente na próxima vez","updateDialog.downloadProgress":"Progresso do download","updateDialog.restartToUpdate":"Reiniciar para atualizar","updateDialog.skipVersion":"Pular esta versão","updateDialog.later":"Mais tarde","feedback.submit.simple.screenshotPrivacyHint":"Verifique se as imagens contêm informações confidenciais antes de enviar."}),"en-US":pt,"pt-BR":pt}`;
+    // Manter inglês e chinês originais; aplicar o dicionário próprio apenas ao pt-BR.
+    const injection = `pt=Object.assign({},${enVar},${dictJson}),g={"zh-CN":Object.assign({},${zhVar},{"settings.locale.pt-BR":"葡萄牙语（巴西）","sidebar.settings.locale.pt-BR":"葡萄牙语（巴西）","updateDialog.availableTitle":"Nova versão v{version}","updateDialog.downloadingTitle":"Baixando v{version}","updateDialog.readyTitle":"v{version} está pronto","updateDialog.downloadAndUpdate":"Baixar atualização","updateDialog.cancelDownload":"Cancelar download","updateDialog.autoDownloadAndInstall":"Baixar e instalar atualizações automaticamente na próxima vez","updateDialog.downloadProgress":"Progresso do download","updateDialog.restartToUpdate":"Reiniciar para atualizar","updateDialog.skipVersion":"Pular esta versão","updateDialog.later":"Mais tarde","feedback.submit.simple.screenshotPrivacyHint":"Verifique se as imagens contêm informações confidenciais antes de enviar."}),"en-US":Object.assign({},${enVar},{"settings.locale.pt-BR":"Portuguese (Brazil)","sidebar.settings.locale.pt-BR":"Portuguese (Brazil)"}),"pt-BR":pt}`;
     intlCode = intlCode.replace(fullG, injection);
 
     // Permitir pt-BR no validador de localizacao
@@ -517,13 +523,34 @@ if (matchCleanG) {
     process.exit(1);
 }
 
-// D. Patch out/renderer/assets/usageStatsUiParts-*.js (Forçar datas em pt-BR)
+// D. Preservar a localidade selecionada nos formatadores de data nativos.
 const usageFileName = Object.keys(cAssetsNode).find(f => f.startsWith("usageStatsUiParts-") && f.endsWith(".js"));
 let usageCode = usageFileName ? getCleanFile("out/renderer/assets/" + usageFileName) : null;
 if (usageCode) {
-    console.log(`[*] Aplicando patch no formatador de datas: out/renderer/assets/${usageFileName}`);
-    usageCode = usageCode.replace(/new Intl\.DateTimeFormat\(e,/g, "new Intl.DateTimeFormat('pt-BR',");
-    console.log("    -> Forçada localidade 'pt-BR' em todos os formatadores de datas!");
+    console.log(`[*] Mantido formatador nativo de datas em out/renderer/assets/${usageFileName}; ele segue o locale ativo.`);
+}
+
+// A ponte local da página de recompensas aceita somente en-US/zh-CN.
+// pt-BR é convertido para en-US nessa integração remota (a tradução visual
+// continua sendo feita pelo preload), para evitar rejeição do contexto.
+const rewardsBridgeFileName = Object.keys(cAssetsNode).find(f => f.startsWith("src-") && f.endsWith(".js") && getCleanFile("out/renderer/assets/" + f)?.includes('var XN=`persist:zcode-rewards`'));
+let rewardsBridgeCode = rewardsBridgeFileName ? getCleanFile("out/renderer/assets/" + rewardsBridgeFileName) : null;
+if (rewardsBridgeCode) {
+    const rewardsContextSchema = 'var XN=`persist:zcode-rewards`,ZN=O({theme:M([`zai-light`,`zai-dark`]),locale:M([`zh-CN`,`en-US`]),auth:';
+    const rewardsContextSchemaPt = 'var XN=`persist:zcode-rewards`,ZN=O({theme:M([`zai-light`,`zai-dark`]),locale:M([`zh-CN`,`en-US`,`pt-BR`]),auth:';
+    if (rewardsBridgeCode.includes(rewardsContextSchema)) {
+        rewardsBridgeCode = rewardsBridgeCode.replace(rewardsContextSchema, rewardsContextSchemaPt);
+    }
+    const rewardsContextSerializer = 'function tP(e,t,n){let r=ZN.parse(e),i=';
+    const rewardsContextSerializerPt = 'function tP(e,t,n){let r=ZN.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i=';
+    if (rewardsBridgeCode.includes(rewardsContextSerializer)) {
+        rewardsBridgeCode = rewardsBridgeCode.replace(rewardsContextSerializer, rewardsContextSerializerPt);
+        console.log(`    -> Ponte de recompensas: contexto pt-BR normalizado para en-US no conteúdo remoto.`);
+    } else if (!rewardsBridgeCode.includes(rewardsContextSerializerPt)) {
+        console.warn("[!] A função serializadora do contexto da página de recompensas mudou; locale remoto não foi ajustado.");
+    }
+} else {
+    console.warn("[!] Bundle da ponte de recompensas não localizado; o locale do conteúdo remoto não foi ajustado.");
 }
 
 // E. Patch out/preload/index.cjs (Tradução DOM dinâmica de botões de atalho e títulos)
@@ -536,7 +563,37 @@ if (preloadCode) {
     }
     const domTranslator = `
     try {
+        function _isPtBrActive() {
+            // The rendered locale follows the active React route more closely than a stale stored preference.
+            try {
+                const pageLanguage = document.documentElement?.lang;
+                if (typeof pageLanguage === "string" && pageLanguage.trim()) {
+                    const normalizedPageLanguage = pageLanguage.trim().toLowerCase();
+                    if (normalizedPageLanguage.startsWith("pt")) return true;
+                    if (normalizedPageLanguage.startsWith("en") || normalizedPageLanguage.startsWith("zh")) return false;
+                }
+            } catch (e) {}
+            try {
+                const preference = window.localStorage?.getItem("zcode-locale-preference");
+                if (typeof preference === "string" && preference.trim()) {
+                    const normalized = preference.trim().toLowerCase();
+                    if (normalized.startsWith("pt")) return true;
+                    if (!["system", "default", "auto", "system-default"].includes(normalized)) return false;
+                }
+            } catch (e) {}
+            const systemLanguage = typeof navigator !== "undefined" ? navigator.language : "";
+            return typeof systemLanguage === "string" && systemLanguage.toLowerCase().startsWith("pt");
+        }
         const _ptDomMap = {
+            "Automations": "Automações",
+            "Automation": "Automação",
+            "Workflows": "Fluxos de trabalho",
+            "Workflow": "Fluxo de trabalho",
+            "Scheduled task template": "Modelo de tarefa agendada",
+            "Every weekday at 09:00": "Todos os dias úteis às 09:00",
+            "Daily at 10:00": "Diariamente às 10:00",
+            "Weekly on Fri at 16:00": "Semanalmente às sextas-feiras às 16:00",
+            "Weekly on Wed at 15:00": "Semanalmente às quartas-feiras às 15:00",
             "No available Plano Start": "Nenhum Plano Inicial disponível",
             "No available Start Plan": "Nenhum Plano Inicial disponível",
             "No available plan": "Nenhum plano disponível",
@@ -607,6 +664,8 @@ if (preloadCode) {
             "ZCode usage and self-diagnosis guide: teaches agents and users how to configure MCP servers, commands, skills, hooks, and plugins, and how to locate and fix configuration problems for each.": "Guia de uso e autodiagnóstico do ZCode: ensina a configurar servidores MCP, comandos, habilidades, hooks e plugins.",
             "Computer Use: automate desktop apps with mouse, keyboard, and UI element control.": "Computer Use: automatize aplicativos de desktop com controle de mouse, teclado e elementos de interface.",
             "New Group": "Novo grupo",
+            "General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks.": "Agente de uso geral para pesquisar questões complexas, buscar código e executar tarefas de várias etapas.",
+            "Read-only search agent for broad fan-out searches.": "Agente de pesquisa somente leitura para buscas abrangentes e distribuídas.",
             "Personal plans": "Planos individuais",
             "Team plans": "Planos para equipes",
             "Monthly": "Mensal",
@@ -614,8 +673,6 @@ if (preloadCode) {
             "Yearly": "Anual",
             "Start Plan": "Plano Inicial",
             "Subscribe": "Assinar",
-            "Refer a friend": "Indique um amigo",
-            "Rewards": "Recompensas",
             "BETTER WHEN SHARED": "MELHOR QUANDO COMPARTILHADO",
             "Invite new users, earn more together.": "Convide novos usuários e ganhem juntos.",
             "Invited Users": "Usuários convidados",
@@ -809,7 +866,60 @@ if (preloadCode) {
             "Quota limit reached": "Limite de cota atingido",
             "min ago": "minutos atrás",
             "Error Summary: ...": "Resumo do erro: ...",
-            "ZCode Desktop App": "Aplicativo Desktop ZCode"
+            "ZCode Desktop App": "Aplicativo Desktop ZCode",
+            "Saved workflows": "Fluxos de trabalho salvos",
+            "Visible from every project": "Visível em todos os projetos",
+            "No global workflows yet. Good for flows that depend on no particular project, such as deep research.": "Ainda não há fluxos de trabalho globais. Eles são úteis para tarefas que não dependem de um projeto específico, como pesquisas aprofundadas.",
+            "Open a local project to run this workflow": "Abra um projeto local para executar este fluxo de trabalho",
+            "Open a local project to run this fluxo de trabalho": "Abra um projeto local para executar este fluxo de trabalho",
+            "Saved fluxos de trabalho": "Fluxos de trabalho salvos",
+            "Create in chat": "Criar no chat",
+            "Open a workspace to see its workflows.": "Abra um espaço de trabalho para ver seus fluxos de trabalho.",
+            "Developer Tools": "Ferramentas de desenvolvimento",
+            "Utilities": "Utilitários",
+            "Productivity": "Produtividade",
+            "Finance": "Finanças",
+            "Show less": "Mostrar menos",
+            "Show more": "Mostrar mais",
+            "Install": "Instalar",
+            "Alibaba Cloud CLI workflows for credential setup, profile checks, and safe cloud resource operations.": "Fluxos de trabalho do Alibaba Cloud CLI para configurar credenciais, verificar perfis e operar recursos de nuvem com segurança.",
+            "Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login.": "Fluxos de trabalho do Lark CLI para documentos, planilhas, Base, calendário, mensagens e outros recursos SaaS, com configuração guiada e login OAuth.",
+            "Tencent Meeting CLI workflows with OAuth2 setup, meeting management, recordings, and attendee reports.": "Fluxos de trabalho do Tencent Meeting CLI com configuração OAuth2, gerenciamento de reuniões, gravações e relatórios de participantes.",
+            "DingTalk Workspace CLI workflows with OAuth/device authorization, profile checks, and optional upstream Skills.": "Fluxos de trabalho do DingTalk Workspace CLI com autorização OAuth ou por dispositivo, verificação de perfil e habilidades oficiais opcionais.",
+            "WeCom CLI workflows for messages, docs, sheets, mail, calendar, meetings, contacts, and todos with QR authentication.": "Fluxos de trabalho do WeCom CLI para mensagens, documentos, planilhas, e-mail, calendário, reuniões, contatos e tarefas, com autenticação por QR Code.",
+            "Obsidian authoring skills from kepano/obsidian-skills: Obsidian Flavored Markdown notes, Bases database views, JSON Canvas boards, vault automation via Obsidian CLI, clean web extraction with Defuddle, and Knap template rendering — plus visualization skills from axtonliu/axton-obsidian-visual-skills: Mermaid and Excalidraw diagram generation and text-to-canvas layout. A setup skill verifies and installs the Obsidian CLI, defuddle, and knap.": "Habilidades de criação para o Obsidian, de kepano/obsidian-skills: notas em Markdown no formato Obsidian, visualizações de banco de dados Bases, quadros JSON Canvas, automação de cofres pelo Obsidian CLI, extração limpa de conteúdo da web com Defuddle e renderização de modelos com Knap. Inclui também habilidades visuais de axtonliu/axton-obsidian-visual-skills para gerar diagramas Mermaid e Excalidraw e organizar texto em telas. Uma habilidade de configuração verifica e instala o Obsidian CLI, o Defuddle e o Knap.",
+            "Accounting close and statutory reporting off the company's own ledger: month-end close checks, ledger reconciliation to transaction-level root cause, account mapping for consolidation, and statutory statements delivered as review-ready drafts": "Fechamento contábil e relatórios estatutários com base no livro-razão da própria empresa: verificações de fim de mês, conciliação até a causa raiz das transações, mapeamento de contas para consolidação e demonstrações estatutárias entregues como rascunhos prontos para revisão.",
+            "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk": "Prospecção de clientes para banco corporativo: triagem por região, cadeia produtiva, parque industrial e polo empresarial; busca de oportunidades; e perfis completos que combinam dados cadastrais, relacionamentos, sinais de oportunidade e riscos.",
+            "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues": "Estruturação e modelagem de transações: análise de acréscimo ou diluição, fontes e usos com estrutura de capital pro forma, comparação com transações anteriores e modelagem de diluição em captações para fusões e aquisições, IPOs, colocações e ofertas de direitos.",
+            "Top-down macro and strategy work: macro dashboards across growth/inflation/liquidity/credit, index valuation percentiles and earnings attribution, cross-asset allocation views, and policy and industrial-plan tracking": "Análise macroeconômica e estratégia de cima para baixo: painéis de crescimento, inflação, liquidez e crédito; percentis de avaliação de índices e atribuição de resultados; alocação entre classes de ativos; e acompanhamento de políticas e planos industriais.",
+            "Corporate finance and FP&A: management reporting off a closed ledger, rolling cash-flow forecasts, budget-versus-actual variance analysis, scenario and break-even analysis, and peer benchmarking against listed comparables": "Finanças corporativas e planejamento financeiro: relatórios gerenciais com base no livro-razão fechado, projeções contínuas de fluxo de caixa, análise de desvios entre orçamento e realizado, cenários, ponto de equilíbrio e comparação com empresas listadas semelhantes.",
+            "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names": "Acompanhamento de listas e carteiras: resumos após o fechamento, alertas de eventos das posições (comunicados, garantias e fim de períodos de restrição) e análise intradiária de movimentos de ações A, H e dos EUA.",
+            "End-to-end investment research reports, sector analysis, earnings updates, and valuation models": "Relatórios completos de pesquisa de investimentos, análises setoriais, atualizações de resultados e modelos de avaliação.",
+            "MCP services for RoyalFlush iFinD stock, global stock, index, fund, and bond data.": "Serviços MCP de dados da RoyalFlush iFinD sobre ações chinesas e globais, índices, fundos e títulos de dívida.",
+            "MCP services for Wind stock, global stock, index, fund, bond, economic, and document data.": "Serviços MCP de dados da Wind sobre ações chinesas e globais, índices, fundos, títulos de dívida, indicadores econômicos e documentos.",
+            "MCP service for Tianyancha company information queries.": "Serviço MCP para consultas de informações empresariais no Tianyancha.",
+            "MCP services for SEC EDGAR filing search and financial web and news search.": "Serviços MCP para pesquisar documentos da SEC EDGAR, notícias e informações financeiras na web.",
+            "GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, Codespaces, and other GitHub resources.": "Fluxos de trabalho do GitHub CLI para commits, pull requests, issues, lançamentos, Actions, repositórios, Codespaces e outros recursos do GitHub.",
+            "GitLab CLI workflows based on GitLab's official Agent Skills for merge requests, issues, CI/CD, repositories, releases, and API operations.": "Fluxos de trabalho do GitLab CLI baseados nas Agent Skills oficiais do GitLab para merge requests, issues, CI/CD, repositórios, lançamentos e operações de API.",
+            "Local-first security guardrails for ZCode with pre-write hooks, end-of-turn review, Git gates, commands, a security-scan skill, and an optional MCP server for sealed deep scans.": "Proteções de segurança locais para o ZCode, com hooks antes da gravação, revisão ao fim do turno, controles do Git, comandos, habilidade de análise de segurança e servidor MCP opcional para verificações aprofundadas isoladas.",
+            "Code Security Protection": "Proteção de segurança do código",
+            "GitHub": "GitHub",
+            "Gitlab": "GitLab",
+            "Gitlab CLI workflows based on GitLab's official Agent Skills...": "Fluxos de trabalho do GitLab CLI baseados nas Agent Skills oficiais do GitLab...",
+            "Cloudbase Skills": "Habilidades do CloudBase",
+            "Lark CLI": "Lark CLI",
+            "Tencent Meeting CLI": "Tencent Meeting CLI",
+            "DingTalk CLI": "DingTalk CLI",
+            "WeCom CLI": "WeCom CLI",
+            "Obsidian": "Obsidian",
+            "Plugin Creator": "Criador de plugins",
+            "Skill Creator": "Criador de habilidades",
+            "ZCode Guide": "Guia do ZCode",
+            "You’re out of usage": "Você atingiu seu limite de uso",
+            "You're out of usage": "Você atingiu seu limite de uso",
+            "Upgrade to unlock more models": "Faça upgrade para desbloquear mais modelos",
+            "More models are only available on paid plans.": "Mais modelos estão disponíveis apenas nos planos pagos.",
+            "Warning: Updates Apply Automatically": "Aviso: as atualizações são aplicadas automaticamente"
         };
         const _filteredMap = {};
         for (const [k, v] of Object.entries(_ptDomMap)) {
@@ -820,8 +930,27 @@ if (preloadCode) {
         const _sortedDomEntries = Object.entries(_filteredMap).sort((a, b) => b[0].length - a[0].length);
         const _visited = new WeakSet();
 
+        function _translateExactMappedText(node) {
+            if (!node) return;
+            if (node.nodeType === 3) {
+                const value = node.nodeValue || "";
+                const key = value.trim();
+                if (key.startsWith("Please create a PowerPoint presentation for me on the topic")) {
+                    node.nodeValue = value.replace(key, "Crie uma apresentação de PowerPoint sobre o tema A evolução dos agentes de IA, cobrindo três etapas: Engenharia de prompts (origens, técnicas principais e limitações) → Engenharia de contexto (por que o contexto é importante e tecnologias-chave, como RAG, memória e uso de ferramentas) → Engenharia de harness (evolução dos frameworks de agentes e produtos representativos, como AutoGPT, ACPAgent e OpenClaw). O estilo deve ser tecnológico, com fundo escuro e uma linha do tempo claramente apresentada.");
+                    return;
+                }
+                if (_filteredMap[key]) node.nodeValue = value.replace(key, _filteredMap[key]);
+                return;
+            }
+            if (node.nodeType !== 1 || node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.tagName === 'CODE' || node.tagName === 'PRE') return;
+            const text = (node.textContent || "").trim();
+            const containsPromptTemplate = text.includes("Please create a PowerPoint presentation for me on the topic");
+            if (!_filteredMap[text] && !containsPromptTemplate) return;
+            for (let i = 0; i < node.childNodes.length; i++) _translateExactMappedText(node.childNodes[i]);
+        }
+
         function _translateNode(node) {
-            if (!node || _visited.has(node)) return;
+            if (!_isPtBrActive() || !node || _visited.has(node)) return;
             _visited.add(node);
 
             try {
@@ -863,7 +992,10 @@ if (preloadCode) {
                     const tag = node.tagName;
                     if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE' || tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'CANVAS') return;
                     const cl = node.className;
-                    if (typeof cl === 'string' && (cl.includes('monaco') || cl.includes('prose') || cl.includes('conversation') || cl.includes('message') || cl.includes('terminal') || cl.includes('xterm') || cl.includes('chat'))) return;
+                    if (typeof cl === 'string' && (cl.includes('monaco') || cl.includes('prose') || cl.includes('conversation') || cl.includes('message') || cl.includes('terminal') || cl.includes('xterm') || cl.includes('chat'))) {
+                        _translateExactMappedText(node);
+                        return;
+                    }
 
                     if (node.placeholder && _filteredMap[node.placeholder.trim()]) {
                         node.placeholder = _filteredMap[node.placeholder.trim()];
@@ -888,13 +1020,32 @@ if (preloadCode) {
                         for (let j = 0; j < m.addedNodes.length; j++) {
                             _translateNode(m.addedNodes[j]);
                         }
+                    } else if (m.type === "characterData" && _isPtBrActive()) {
+                        // React can update existing text nodes without inserting new DOM nodes.
+                        // Translate exact mapped values only; never walk the page on text mutations.
+                        const textNode = m.target;
+                        const value = textNode.nodeValue || "";
+                        const key = value.trim();
+                        if (_filteredMap[key]) textNode.nodeValue = value.replace(key, _filteredMap[key]);
+                    } else if (m.type === "attributes" && _isPtBrActive()) {
+                        // Quick-task labels/tooltips can be refreshed as attributes on reused nodes.
+                        const element = m.target;
+                        const value = element.getAttribute(m.attributeName) || "";
+                        const key = value.trim();
+                        if (_filteredMap[key]) element.setAttribute(m.attributeName, value.replace(key, _filteredMap[key]));
                     }
                 }
             });
             const startObserving = () => {
                 if (document.body) {
                     _translateNode(document.body);
-                    observer.observe(document.body, { childList: true, subtree: true });
+                    observer.observe(document.body, {
+                        childList: true,
+                        characterData: true,
+                        attributes: true,
+                        attributeFilter: ["title", "aria-label", "placeholder"],
+                        subtree: true
+                    });
                 }
             };
             if (document.readyState === "loading") {
@@ -913,6 +1064,24 @@ if (preloadCode) {
 console.log("[*] Aplicando patch nos preloads das Webviews (Recompensas e Planos)");
 const webviewTranslator = `
 try {
+    function _wvShouldTranslate() {
+        try {
+            const fs = require("fs");
+            const os = require("os");
+            const path = require("path");
+            const home = process.env.USERPROFILE || os.homedir();
+            const settingsPath = path.join(home, ".zcode", "v2", "setting.json");
+            const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+            const preference = settings.localePreference || settings.locale;
+            if (typeof preference === "string" && preference.trim()) {
+                const normalized = preference.trim().toLowerCase();
+                if (normalized.startsWith("pt")) return true;
+                if (!["system", "default", "auto", "system-default"].includes(normalized)) return false;
+            }
+        } catch (e) {}
+        const language = typeof navigator !== "undefined" ? navigator.language : "";
+        return typeof language === "string" && language.toLowerCase().startsWith("pt");
+    }
     const _wvMap = {
         "Personal plans": "Planos individuais",
         "Team plans": "Planos para equipes",
@@ -923,6 +1092,36 @@ try {
         "Subscribe": "Assinar",
         "Refer a friend": "Indique um amigo",
         "Rewards": "Recompensas",
+        "Reward tasks": "Tarefas de recompensa",
+        "Your referrals": "Suas indicações",
+        "Referral tasks": "Tarefas de indicação",
+        "Invite friends": "Convide amigos",
+        "Invite new users, earn more together.": "Convide novos usuários e ganhem juntos.",
+        "Invite new users,": "Convide novos usuários,",
+        "earn more together.": "ganhem juntos.",
+        "REWARDS": "RECOMPENSAS",
+        "BUILD TOGETHER": "CRESCEMOS JUNTOS",
+        "The campaign hasn’t started yet": "A campanha ainda não começou",
+        "The campaign hasn't started yet": "A campanha ainda não começou",
+        "The campaign hasn’t started yet.": "A campanha ainda não começou.",
+        "The campaign hasn't started yet.": "A campanha ainda não começou.",
+        "Task": "Tarefa",
+        "Progress": "Progresso",
+        "Reward": "Recompensa",
+        "No reward tasks": "Nenhuma tarefa de recompensa",
+        "Friend": "Amigo",
+        "Status": "Situação",
+        "Friend’s reward": "Recompensa do amigo",
+        "Friend's reward": "Recompensa do amigo",
+        "Invited at": "Convidado em",
+        "No referrals yet": "Nenhuma indicação ainda",
+        "Reward history": "Histórico de recompensas",
+        "Source": "Origem",
+        "Received": "Recebido",
+        "Claim": "Resgatar",
+        "Claim now": "Resgatar agora",
+        "Refresh": "Atualizar",
+        "Open site": "Abrir site",
         "BETTER WHEN SHARED": "MELHOR QUANDO COMPARTILHADO",
         "Invite new users, earn more together.": "Convide novos usuários e ganhem juntos.",
         "Invited Users": "Usuários convidados",
@@ -935,7 +1134,7 @@ try {
     };
     const _wvVisited = new WeakSet();
     function _transWv(node) {
-        if (!node || _wvVisited.has(node)) return;
+        if (!_wvShouldTranslate() || !node || _wvVisited.has(node)) return;
         _wvVisited.add(node);
         if (node.nodeType === 3) {
             const t = node.nodeValue ? node.nodeValue.trim() : "";
@@ -959,13 +1158,18 @@ try {
                     for (let j = 0; j < m.addedNodes.length; j++) {
                         _transWv(m.addedNodes[j]);
                     }
+                } else if (m.type === "characterData" && _wvShouldTranslate()) {
+                    const textNode = m.target;
+                    const value = textNode.nodeValue || "";
+                    const key = value.trim();
+                    if (_wvMap[key]) textNode.nodeValue = value.replace(key, _wvMap[key]);
                 }
             }
         });
         window.addEventListener("DOMContentLoaded", () => {
             if (document.body) {
                 _transWv(document.body);
-                obs.observe(document.body, { childList: true, subtree: true });
+                obs.observe(document.body, { childList: true, characterData: true, subtree: true });
             }
         });
     }
@@ -985,35 +1189,42 @@ const tempCheckStyles = path.join(resourcesDir, "temp_check_styles.mjs");
 const tempCheckPreload = path.join(resourcesDir, "temp_check_preload.cjs");
 const tempCheckHost = path.join(resourcesDir, "temp_check_host.mjs");
 const tempCheckDesktopMenu = path.join(resourcesDir, "temp_check_desktop_menu.mjs");
+const tempCheckRewardsBridge = path.join(resourcesDir, "temp_check_rewards_bridge.mjs");
 
 try {
     fs.writeFileSync(tempCheckIntl, intlCode, "utf8");
-    execSync(`node --check "${tempCheckIntl}"`, { stdio: "ignore" });
+    execSync(`node --check "${tempCheckIntl}"`, { stdio: "inherit" });
     fs.unlinkSync(tempCheckIntl);
 
     fs.writeFileSync(tempCheckMain, mainCode, "utf8");
-    execSync(`node --check "${tempCheckMain}"`, { stdio: "ignore" });
+    execSync(`node --check "${tempCheckMain}"`, { stdio: "inherit" });
     fs.unlinkSync(tempCheckMain);
 
     fs.writeFileSync(tempCheckStyles, stylesCode, "utf8");
-    execSync(`node --check "${tempCheckStyles}"`, { stdio: "ignore" });
+    execSync(`node --check "${tempCheckStyles}"`, { stdio: "inherit" });
     fs.unlinkSync(tempCheckStyles);
 
     if (hostCode) {
         fs.writeFileSync(tempCheckHost, hostCode, "utf8");
-        execSync(`node --check "${tempCheckHost}"`, { stdio: "ignore" });
+        execSync(`node --check "${tempCheckHost}"`, { stdio: "inherit" });
         fs.unlinkSync(tempCheckHost);
+    }
+
+    if (rewardsBridgeCode) {
+        fs.writeFileSync(tempCheckRewardsBridge, rewardsBridgeCode, "utf8");
+        execSync(`node --check "${tempCheckRewardsBridge}"`, { stdio: "inherit" });
+        fs.unlinkSync(tempCheckRewardsBridge);
     }
 
     if (desktopMenuChunkCode) {
         fs.writeFileSync(tempCheckDesktopMenu, desktopMenuChunkCode, "utf8");
-        execSync(`node --check "${tempCheckDesktopMenu}"`, { stdio: "ignore" });
+        execSync(`node --check "${tempCheckDesktopMenu}"`, { stdio: "inherit" });
         fs.unlinkSync(tempCheckDesktopMenu);
     }
 
     if (preloadCode) {
         fs.writeFileSync(tempCheckPreload, preloadCode, "utf8");
-        execSync(`node --check "${tempCheckPreload}"`, { stdio: "ignore" });
+        execSync(`node --check "${tempCheckPreload}"`, { stdio: "inherit" });
         fs.unlinkSync(tempCheckPreload);
     }
 
@@ -1024,6 +1235,7 @@ try {
     try { fs.unlinkSync(tempCheckStyles); } catch {}
     try { fs.unlinkSync(tempCheckHost); } catch {}
     try { fs.unlinkSync(tempCheckDesktopMenu); } catch {}
+    try { fs.unlinkSync(tempCheckRewardsBridge); } catch {}
     try { fs.unlinkSync(tempCheckPreload); } catch {}
     console.error("[x] Erro: O codigo gerado possui falhas de sintaxe e foi rejeitado para evitar quebra:", e.message);
     process.exit(1);
@@ -1036,6 +1248,7 @@ const patchedDesktopMenuBuf = desktopMenuChunkCode ? Buffer.from(desktopMenuChun
 const patchedChunkHostBuf = chunkHostCode ? Buffer.from(chunkHostCode, "utf8") : null;
 const patchedIntlBuf = Buffer.from(intlCode, "utf8");
 const patchedUsageBuf = usageCode ? Buffer.from(usageCode, "utf8") : null;
+const patchedRewardsBridgeBuf = rewardsBridgeCode ? Buffer.from(rewardsBridgeCode, "utf8") : null;
 const patchedPreloadBuf = preloadCode ? Buffer.from(preloadCode, "utf8") : null;
 const patchedRewardsBuf = rewardsCode ? Buffer.from(rewardsCode, "utf8") : null;
 const patchedCodingPlanBuf = codingPlanCode ? Buffer.from(codingPlanCode, "utf8") : null;
@@ -1075,6 +1288,7 @@ const newHeader = { files: {} };
 const targetIntlRelPath = `out/renderer/assets/${intlFileName}`;
 const targetStylesRelPath = `out/renderer/assets/${stylesFileName}`;
 const targetUsageRelPath = usageFileName ? `out/renderer/assets/${usageFileName}` : null;
+const targetRewardsBridgeRelPath = rewardsBridgeFileName ? `out/renderer/assets/${rewardsBridgeFileName}` : null;
 
 for (const item of allItems) {
     const p = item.path;
@@ -1106,6 +1320,13 @@ for (const item of allItems) {
         const integrity = computeIntegrity(patchedUsageBuf);
         setDeep(newHeader, parts, { size, offset, integrity });
         filesToWrite.push({ type: "buffer", buffer: patchedUsageBuf, size, path: p });
+        currentOffset += size;
+    } else if (targetRewardsBridgeRelPath && p === targetRewardsBridgeRelPath && patchedRewardsBridgeBuf) {
+        const size = patchedRewardsBridgeBuf.length;
+        const offset = currentOffset.toString();
+        const integrity = computeIntegrity(patchedRewardsBridgeBuf);
+        setDeep(newHeader, parts, { size, offset, integrity });
+        filesToWrite.push({ type: "buffer", buffer: patchedRewardsBridgeBuf, size, path: p });
         currentOffset += size;
     } else if (p === "out/preload/index.cjs" && patchedPreloadBuf) {
         const size = patchedPreloadBuf.length;

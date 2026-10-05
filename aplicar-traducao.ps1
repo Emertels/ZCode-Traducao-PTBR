@@ -217,7 +217,7 @@ if (Test-Path $settingsPath) {
 }
 if ((Test-Path $enPak) -and -not (Test-Path $ptPak)) { Copy-Item -LiteralPath $enPak -Destination $ptPak }
 Write-Host '[5/6] Traduzindo skills e plugins (essa etapa pode demorar)...' -ForegroundColor White
-foreach ($auxPatcher in @($pluginPatcher, $visualPatcher)) {
+foreach ($auxPatcher in @($pluginPatcher)) {
     if (Test-Path $auxPatcher) { & $node.Source $auxPatcher $versionBackup (Join-Path $resources "glm"); if ($LASTEXITCODE -ne 0) { Write-Host "[!] Um patch auxiliar não foi aplicado: $(Split-Path $auxPatcher -Leaf)" -ForegroundColor Yellow } }
 }
 
