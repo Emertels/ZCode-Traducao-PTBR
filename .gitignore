@@ -1,0 +1,23 @@
+# Windows/macOS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Temporary and runtime files
+*.log
+*.tmp
+*.temp
+*.bak
+__pycache__/
+
+# User-specific backups created by installers
+**/_backups/
+# Compiled modified ZCode application packages (including compressed copies)
+/app-pt.asar
+/app-pt.asar.zip
+/app-pt*.zip
+*.zip
+*.7z
+*.rar
