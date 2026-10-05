@@ -95,19 +95,17 @@ Diferente de métodos manuais que substituem o `app.asar` por uma versão antiga
 
 ## 🚀 Como Instalar (em 2 cliques)
 
-1. **Feche o ZCode** caso ele esteja aberto no computador.
-2. Dê um duplo clique no arquivo:
+1. Dê um duplo clique no arquivo:
    ```cmd
    Instalar-Traducao.bat
    ```
-3. O instalador automático irá:
+   *(Não precisa fechar o ZCode antes: o instalador detecta e fecha o aplicativo automaticamente para aplicar a localização com total segurança).*
+2. O instalador automático irá:
    - Detectar a pasta oficial do ZCode no Windows.
    - Preservar o backup original limpo de fábrica na pasta modular `_backups\<versão>\app.asar`.
    - Executar o **Patcher Dinâmico**, injetando a tradução na versão instalada.
    - Configurar as preferências de idioma em `setting.json` para `pt-BR`.
-4. Ao concluir, digite `S` para abrir; `N`, `Enter` ou `Esc` fecha sem abrir o **com a tradução PT-BR aplicada à versão instalada**!
-
-> **Bônus de tokens da Zen AI:** quando a tradução PT-BR está ativa, a oferta de bônus em tokens pode não aparecer no ZCode — seja de 100 milhões, 300 milhões ou qualquer outra quantidade oferecida. Para ver e resgatar o bônus, altere temporariamente o idioma nas configurações do ZCode para inglês ou chinês. Depois de resgatá-lo, volte às configurações e selecione Português (Brasil) novamente. Não é necessário restaurar o aplicativo.
+3. Ao concluir, pressione `S` para abrir o ZCode com a tradução PT-BR aplicada!
 
 ---
 
