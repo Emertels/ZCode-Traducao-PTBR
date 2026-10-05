@@ -185,25 +185,3 @@ Apaixonado por tecnologia, informática, jogos, manutenção de sistemas e tradu
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Apoiar%20Projeto-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/emertels)
 
 </div>
-
-
-## Auditoria da tradução
-
-Use `tools/scan-untranslated.cjs` no ASAR instalado ou no arquivo limpo da mesma versão. O scanner lista candidatos em inglês no `IntlProvider`; revise o contexto, pois também há textos técnicos/de ajuda e nomes de produtos. A contagem bruta não equivale ao número de rótulos da interface confirmadamente sem tradução.
-## Codificação e backups por versão
-
-Os atalhos `.bat` são arquivos ASCII sem BOM e ativam a página de código UTF-8. Os scripts PowerShell são UTF-8 com BOM e definem entrada e saída UTF-8, para manter acentos e cedilhas corretos no Windows PowerShell 5.1. Os backups originais ficam dentro da pasta do programa, separados pela versão (e pelo commit quando o aplicativo fornece essa identificação), e não devem ser substituídos por uma cópia já traduzida. Ao executar a tradução novamente, o patch deve partir do backup original confiável para evitar empilhar alterações. Se a cópia original estiver ausente, inválida ou não corresponder à versão instalada, o instalador deve parar antes de sobrescrever os arquivos e explicar como recuperar uma origem limpa.
-## Reexecução e restauração
-- Ao executar novamente, o instalador reconhece uma tradução completa e informa que não precisa reaplicá-la. Se estiver parcial, recompõe a tradução a partir do backup original limpo e exato da versão.
-- O backup original é criado uma única vez em `<pasta instalada>\_backups\<versão>` e nunca é substituído pela tradução. Se uma instalação já modificada não tiver backup confiável, o instalador interrompe e informa isso.
-- Na restauração, arquivos que já correspondem ao original são identificados e não são copiados novamente. Backup ausente ou inválido gera uma mensagem clara e impede uma restauração insegura.
-- O crédito de localização é exibido como `Tradução PT-BR: Emerson Teles`, na cor turquesa `#00adb5`, no local de crédito disponível na interface.
-### Mensagens do instalador e créditos
-- Se já estiver traduzido, o instalador mostra uma mensagem ciano clara e não reaplica o pacote.
-- Se já estiver original, a restauração avisa em ciano que não é necessária; uma restauração real termina com a confirmação verde de sucesso.
-- No prompt final, S abre o aplicativo em processo independente e a janela do CMD iniciada pelo atalho fecha automaticamente; N, Enter ou Esc encerra sem abrir o aplicativo.
-- Crédito: Tradução PT-BR: Emerson Teles, em turquesa #00adb5. O crédito fica no diálogo “Sobre”, abaixo dos direitos autorais.
-### Restauração idempotente e arquivos auxiliares
-Sem backup da versão, o restaurador só informa em azul-turquesa que a restauração é desnecessária depois que o verificador confirma que o `app.asar` ativo está limpo e corresponde à versão instalada. Cada arquivo auxiliar é restaurado isoladamente; caminhos incompatíveis, ausentes ou com destino inesperado são mantidos e exibidos em amarelo. Se algum item falhar, o resultado final informa restauração parcial, nunca sucesso completo.
-## Backup original ausente
-Se o backup original da versão não estiver em _backups, o restaurador não consegue reconstruir os arquivos de fábrica e deve informar que a restauração não é possível. Repare ou instale a versão oficial do aplicativo por cima da instalação existente, preservando os projetos e dados do perfil do usuário; depois execute novamente o instalador ou restaurador.
