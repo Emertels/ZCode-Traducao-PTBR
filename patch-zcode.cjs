@@ -168,12 +168,10 @@ if (!cleanAsarPath || isAlreadyTranslatedAsar(cleanAsarPath) || getAsarVersion(c
     console.error("    Repare/instale o ZCode oficial por cima e tente novamente. Mantenha os dados do usuário.");
     process.exit(11);
 }
-if (!isSrcTranslated && cleanAsarPath === versionBackupAsar) {
+if (cleanAsarPath === versionBackupAsar) {
     console.log("[OK] Backup original em inglês desta versão encontrado e validado; ele será mantido sem substituição.");
 }
-if (isSrcTranslated) {
-    process.exit(10);
-}
+if (isSrcTranslated) console.log("[*] Tradução existente detectada; a versão atualizada será reconstruída a partir do backup limpo.");
 console.log(`[*] Utilizando base limpa original de fábrica (em inglês) de: ${cleanAsarPath}`);
 let cleanFd = fs.openSync(cleanAsarPath, "r");
 const cSizeBuf = Buffer.alloc(16);
@@ -236,10 +234,28 @@ if (jbIdx !== -1) {
     }
 }
 
-// Traduzir menu de contexto da bandeja do sistema (Windows Tray)
+// O About é aberto no processo principal, cujo locale nativo não inclui pt-BR.
+// Preserve o catálogo inglês; use o catálogo PT-BR para os locales não ingleses
+// enquanto a tradução PT-BR estiver aplicada.
+const aboutLocaleNeedle = 'function gl(e){return Jb[e]??Jb[et]}';
+const aboutLocaleLocalized = 'function gl(e){return Jb[String(e).toLowerCase().startsWith("en")?"en-US":"pt-BR"]??Jb[et]}';
+if (mainCode.includes(aboutLocaleNeedle)) {
+    mainCode = mainCode.replace(aboutLocaleNeedle, aboutLocaleLocalized);
+    console.log("    -> Diálogo Sobre usa PT-BR no fallback não inglês e mantém o catálogo inglês.");
+}
+const aboutAppNameNeedle = 'applicationName:rL,appVersion:n.appVersion';
+const aboutAppNameLocalized = 'applicationName:String(t).toLowerCase().startsWith("en")?rL:"Aplicativo do ZCode para desktop",appVersion:n.appVersion';
+if (mainCode.includes(aboutAppNameNeedle)) {
+    mainCode = mainCode.replace(aboutAppNameNeedle, aboutAppNameLocalized);
+    console.log("    -> Nome do aplicativo no diálogo Sobre traduzido condicionalmente para PT-BR.");
+}
+
+// Traduzir menu de contexto da bandeja do sistema (Windows Tray).
+// O processo principal do ZCode resolve o locale nativo apenas como en-US/zh-CN;
+// quando está em chinês, o mapa PT-BR deve converter os rótulos chineses também.
 const trayLabelNeedle = 'let t=s(i=>Mt(e.getLocale(),i),"getLabel")';
 if (mainCode.includes(trayLabelNeedle)) {
-    const ptTrayMapCode = `const _ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale(),t=s(i=>{let val=Mt(locale,i);return locale==="pt-BR"?(_ptTrayMap[val]||val):val},"getLabel")`;
+    const ptTrayMapCode = `const _ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale(),normalizedLocale=String(locale).replace(/_/g,"-").toLowerCase(),isEnglishLocale=/^en(?:-|$)/.test(normalizedLocale),t=s(i=>{let val=Mt(locale,i);return isEnglishLocale?val:(_ptTrayMap[val]||val)},"getLabel")`;
     mainCode = mainCode.replace(trayLabelNeedle, ptTrayMapCode);
     console.log("    -> Menu da bandeja do sistema (System Tray) traduzido para PT-BR.");
 }
@@ -729,6 +745,9 @@ if (preloadCode) {
             "Create new skills, edit existing skills, and iterate wording. Use when writing SKILL.md from scratch, improving existing skills, turning repeated workflows into reusable skills, or refining skill descriptions to improve trigger reliability.": "Crie novas habilidades, edite as existentes e refine a redação. Use ao criar um SKILL.md do zero, aprimorar habilidades existentes, transformar fluxos de trabalho repetidos em habilidades reutilizáveis ou refinar descrições para melhorar a precisão dos gatilhos.",
             "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix spreadsheets.": "Use esta habilidade sempre que um arquivo de planilha for a entrada ou saída principal. Permite abrir, ler, editar ou corrigir planilhas.",
             "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .csv, or .tsv file; create a new spreadsheet from scratch or from other data sources; analyze data and output results as an Excel file with charts; convert between tabular file formats (CSV/TSV/JSON/PDF-table → XLSX, or XLSX → CSV/JSON); clean, merge, pivot, or transform tabular data. Trigger especially when the user references a spreadsheet file by name, says 'make a table/report/model', mentions Excel/CSV/数据分析/报表/汇总, asks to convert or export a spreadsheet (e.g. 'csv转excel', 'json转表格', 'export as CSV'), or wants data visualization inside a spreadsheet.": "Use esta habilidade sempre que um arquivo de planilha for a entrada ou saída principal. Isso inclui abrir, ler, editar ou corrigir arquivos .xlsx, .xlsm, .csv ou .tsv existentes; criar planilhas do zero ou a partir de outras fontes; analisar dados e gerar um arquivo Excel com gráficos; converter formatos tabulares (CSV/TSV/JSON/tabela de PDF → XLSX ou XLSX → CSV/JSON); limpar, mesclar, criar tabelas dinâmicas ou transformar dados. Acione especialmente quando o usuário mencionar um arquivo de planilha, pedir uma tabela, relatório ou modelo, mencionar Excel/CSV/análise de dados/relatórios/consolidação, solicitar conversões ou exportações, ou pedir visualizações de dados em uma planilha.",
+            "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .csv, or .tsv file; create a new spreadsheet from scratch or from other data sources; analyze data and output results as an Excel file with charts; convert between tabular file formats (CSV/TSV/JSON/PDF-table → XLSX, or XLSX → CSV/JSON); clean, merge, pivot, or transform tabular data. Trigger especially when the user references a spreadsheet file by name or path, says 'make a table/report/model', mentions Excel/CSV/数据分析/报表/汇总, asks to convert or export a spreadsheet (e.g. 'csv转excel', 'json转表格', 'export as CSV'), or wants data visualization inside a spreadsheet.": "Use esta habilidade sempre que um arquivo de planilha for a entrada ou saída principal. Isso inclui abrir, ler, editar ou corrigir arquivos .xlsx, .xlsm, .csv ou .tsv existentes; criar planilhas do zero ou a partir de outras fontes; analisar dados e gerar um arquivo Excel com gráficos; converter formatos tabulares (CSV/TSV/JSON/tabela de PDF → XLSX ou XLSX → CSV/JSON); limpar, mesclar, criar tabelas dinâmicas ou transformar dados. Acione especialmente quando o usuário mencionar um arquivo de planilha por nome ou caminho, pedir uma tabela, relatório ou modelo, mencionar Excel/CSV/análise de dados/relatórios/consolidação, solicitar conversões ou exportações, ou pedir visualizações de dados em uma planilha.",
+            "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises": "Análise de contrapartes e empresas: relatórios estruturados de due diligence, mapeamento de partes relacionadas e da cadeia de suprimentos e avaliação de riscos (litígios, registros de desonestidade, garantias e penalidades) de empresas chinesas.",
+            "Fund and fund-manager research: multi-criteria fund screening, fund and manager profiles, holdings and style analysis, and shortlist comparisons for funds, ETFs, and LOFs": "Pesquisa de fundos e gestores: seleção de fundos por múltiplos critérios, perfis de fundos e gestores, análise de posições e estilos de investimento e comparação de finalistas entre fundos, ETFs e LOFs.",
             "Use to diagnose and fix ZCode custom slash-command (/command) configuration problems in the ZCode client.": "Use para diagnosticar e corrigir problemas de configuração de comandos de barra personalizados (/comando) no cliente ZCode.",
             "Use to diagnose and fix ZCode hook configuration problems in the ZCode client. Applies when a hook does not trigger or an event name is wrong.": "Use para diagnosticar e corrigir problemas de configuração de hooks no cliente ZCode.",
             "Use to diagnose and fix ZCode MCP (Model Context Protocol) server configuration problems in the ZCode client.": "Use para diagnosticar e corrigir problemas de configuração de servidores MCP (Model Context Protocol) no cliente ZCode.",

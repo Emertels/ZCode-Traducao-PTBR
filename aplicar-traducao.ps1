@@ -95,15 +95,15 @@ if (Test-Path -LiteralPath $backupAsar -PathType Leaf) {
 }
 if ($sourceState -eq 10) {
     if ($backupIsClean) {
-        Write-Host "[i] ZCode já está traduzido para Português (Brasil). Nenhuma alteração necessária." -ForegroundColor Cyan
+        Write-Host "[i] Tradução existente detectada. As alterações serão reaplicadas a partir do backup original limpo." -ForegroundColor Cyan
         Write-Host "[i] Backup original em inglês preservado em: $backupAsar" -ForegroundColor Cyan
-        if (Read-OpenChoice "Deseja abrir o ZCode? [S = abrir | N/Enter/Esc = fechar]: ") { Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`"" }
-        exit 0
     }
-    Write-Host "[x] ZCode está traduzido, mas o backup original desta versão está ausente ou inválido." -ForegroundColor Red
-    Write-Host "    Repare/instale o ZCode oficial por cima e tente novamente; mantenha as pastas de dados do usuário." -ForegroundColor Cyan
-    Pause
-    exit 1
+    else {
+        Write-Host "[x] ZCode está traduzido, mas o backup original desta versão está ausente ou inválido." -ForegroundColor Red
+        Write-Host "    Repare/instale o ZCode oficial por cima e tente novamente; mantenha as pastas de dados do usuário." -ForegroundColor Cyan
+        Pause
+        exit 1
+    }
 }
 if ($sourceState -ne 0 -and -not $backupIsClean) {
     Write-Host "[x] O app.asar está modificado e não há backup original limpo desta versão." -ForegroundColor Red

@@ -15,6 +15,11 @@
 - O usuário confirmou que as correções dos atalhos e descrições das outras telas estão funcionando; a regressão visual dos atalhos foi identificada nesta atualização e corrigida no código-fonte, aguardando nova instalação para confirmação.
 - O atalho `Idle-time task` agora é reaplicado em atualizações de nós e atributos reutilizados pelo React (`title`, `aria-label` e `placeholder`).
 - Traduzidas por completo as descrições das habilidades `pptx`, `skill-creator` e `xlsx`, usando as descrições integrais encontradas tanto nos pacotes instalados quanto no cache ZCode (versões de cache correspondentes).
+- Corrigida a variante atual da descrição longa da habilidade `xlsx` (inclui a referência ao arquivo por nome ou caminho), que não correspondia à entrada anterior do mapa.
+- Traduzidas as descrições em inglês dos cartões de due diligence de empresas e pesquisa de fundos/gestores no Marketplace financeiro.
+- Corrigido o idioma do menu da bandeja: como o processo principal resolve o locale nativo apenas em inglês ou chinês, os rótulos chineses agora são traduzidos quando o ZCode está localizado em PT-BR; rótulos ingleses continuam originais para permitir a restauração do inglês.
+- O instalador agora reaplica atualizações sobre uma instalação já traduzida, reconstruindo a partir do backup original limpo e validado da mesma versão.
+- Corrigido o diálogo “Sobre o ZCode”: o processo principal agora usa os rótulos PT-BR no locale não inglês, incluindo versão, direitos autorais, botão e nome do aplicativo; o catálogo inglês permanece intacto.
 - Fallback seguro de locale na API de campanhas de bônus, preservando integridade das consultas de benefícios e resgate.
 
 ### Idioma e Localização
