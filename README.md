@@ -2,7 +2,6 @@
 
 ![Versão](https://img.shields.io/badge/Versão-v1.0.0-teal?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/Idioma-Português%20(Brasil)-green?style=for-the-badge)
-[![Vídeo no YouTube](https://img.shields.io/badge/YouTube-Assistir_Vídeo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=lsZYjCf9EV4)
 
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
 
@@ -13,10 +12,6 @@ Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR)
 <p align="center">
   <a href="https://www.youtube.com/watch?v=lsZYjCf9EV4" target="_blank">
     <img src="https://img.youtube.com/vi/lsZYjCf9EV4/maxresdefault.jpg" alt="Vídeo Tutorial da Tradução ZCode no YouTube" width="95%">
-  </a>
-  <br>
-  <a href="https://www.youtube.com/watch?v=lsZYjCf9EV4" target="_blank">
-    <img src="https://img.shields.io/badge/Assistir_no_YouTube-Vídeo_Oficial_PT--BR-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Assistir no YouTube">
   </a>
 </p>
 
