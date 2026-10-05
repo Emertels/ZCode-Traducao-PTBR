@@ -250,6 +250,16 @@ if (mainCode.includes(aboutAppNameNeedle)) {
     console.log("    -> Nome do aplicativo no diálogo Sobre traduzido condicionalmente para PT-BR.");
 }
 
+// O diálogo Sobre recebe copyright nativo do Electron, que ignora o catálogo
+// localizado. Use o texto do catálogo em PT-BR e preserve o copyright original
+// quando o locale selecionado for inglês.
+const aboutCopyrightNeedle = 'copyright:cL(void 0,t),optimizationLine:dL(n,t)';
+const aboutCopyrightLocalized = 'copyright:String(t).toLowerCase().startsWith("en")?cL(void 0,t):i.copyright(n.appVersion),optimizationLine:dL(n,t)';
+if (mainCode.includes(aboutCopyrightNeedle)) {
+    mainCode = mainCode.replace(aboutCopyrightNeedle, aboutCopyrightLocalized);
+    console.log("    -> Copyright do diálogo Sobre localizado em PT-BR e preservado em inglês.");
+}
+
 // Traduzir menu de contexto da bandeja do sistema (Windows Tray).
 // O processo principal do ZCode resolve o locale nativo apenas como en-US/zh-CN;
 // quando está em chinês, o mapa PT-BR deve converter os rótulos chineses também.
@@ -340,6 +350,15 @@ if (desktopMenuChunkCode) {
         'function ik(t,n){return(eh[t]??eh[fs])[n]}',
         'function ik(t,n){return(eh[t]??eh[fs]??eh["en-US"])[n]}'
     );
+
+    // O seletor da interface já oferece pt-BR, mas o schema central rejeita
+    // esse valor ao validar setting.json, causando fallback para inglês ao abrir.
+    const localeSchemaNeedle = '_o=e.enum(["zh-CN","en-US"]),ov=e.enum(["system","zh-CN","en-US"])';
+    const localeSchemaLocalized = '_o=e.enum(["zh-CN","en-US","pt-BR"]),ov=e.enum(["system","zh-CN","en-US","pt-BR"])';
+    if (desktopMenuChunkCode.includes(localeSchemaNeedle)) {
+        desktopMenuChunkCode = desktopMenuChunkCode.replace(localeSchemaNeedle, localeSchemaLocalized);
+        console.log("    -> Schema de configurações aceita e persiste pt-BR como idioma inicial.");
+    }
 }
 
 

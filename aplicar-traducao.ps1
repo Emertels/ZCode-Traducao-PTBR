@@ -210,8 +210,8 @@ if (Test-Path $glmCjs) {
 if (Test-Path $settingsPath) {
     try {
         $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        if (-not $settings.general) { $settings | Add-Member -NotePropertyName general -NotePropertyValue ([pscustomobject]@{}) }
-        $settings.general | Add-Member -NotePropertyName locale -NotePropertyValue "pt-BR" -Force
+        $settings | Add-Member -NotePropertyName locale -NotePropertyValue "pt-BR" -Force
+        $settings | Add-Member -NotePropertyName localePreference -NotePropertyValue "pt-BR" -Force
         $settings | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
     } catch { Write-Host "[!] Não foi possível atualizar setting.json: $($_.Exception.Message)" -ForegroundColor Yellow }
 }

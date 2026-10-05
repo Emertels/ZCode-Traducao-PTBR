@@ -20,6 +20,8 @@
 - Corrigido o idioma do menu da bandeja: como o processo principal resolve o locale nativo apenas em inglês ou chinês, os rótulos chineses agora são traduzidos quando o ZCode está localizado em PT-BR; rótulos ingleses continuam originais para permitir a restauração do inglês.
 - O instalador agora reaplica atualizações sobre uma instalação já traduzida, reconstruindo a partir do backup original limpo e validado da mesma versão.
 - Corrigido o diálogo “Sobre o ZCode”: o processo principal agora usa os rótulos PT-BR no locale não inglês, incluindo versão, direitos autorais, botão e nome do aplicativo; o catálogo inglês permanece intacto.
+- Corrigido o texto nativo de copyright no diálogo “Sobre”, que ignorava o catálogo localizado, e ampliado o schema de configurações para aceitar `pt-BR` em `locale` e `localePreference`, mantendo o português como idioma inicial após reiniciar.
+- Corrigido o locale inicial do instalador: `locale` e `localePreference` agora são salvos no nível principal de `setting.json`, evitando que a preferência “Padrão do sistema” faça o ZCode iniciar em inglês.
 - Fallback seguro de locale na API de campanhas de bônus, preservando integridade das consultas de benefícios e resgate.
 
 ### Idioma e Localização
