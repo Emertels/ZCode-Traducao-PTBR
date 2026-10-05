@@ -2,22 +2,38 @@
 
 ![Versão](https://img.shields.io/badge/Versão-v1.0.0-teal?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/Idioma-Português%20(Brasil)-green?style=for-the-badge)
+[![Vídeo no YouTube](https://img.shields.io/badge/YouTube-Assistir_Vídeo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=lsZYjCf9EV4)
 
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
 
 ---
 
+## 🎥 Vídeo Tutorial & Demonstração
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=lsZYjCf9EV4" target="_blank">
+    <img src="https://img.youtube.com/vi/lsZYjCf9EV4/maxresdefault.jpg" alt="Vídeo Tutorial da Tradução ZCode no YouTube" width="95%">
+  </a>
+  <br>
+  <a href="https://www.youtube.com/watch?v=lsZYjCf9EV4" target="_blank">
+    <img src="https://img.shields.io/badge/Assistir_no_YouTube-Vídeo_Oficial_PT--BR-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Assistir no YouTube">
+  </a>
+</p>
+
+---
+
 ## 📋 Índice
 1. [Sobre o Pacote](#-sobre-o-pacote)
-2. [O que Foi Traduzido](#-o-que-foi-traduzido)
-3. [Destaque Tecnológico: Patcher Dinâmico](#-destaque-tecnológico-patcher-dinâmico-automatizado)
-4. [Estrutura da Pasta](#-estrutura-da-pasta)
-5. [Como Instalar](#-como-instalar-em-2-cliques)
-6. [Como Restaurar o Original de Fábrica](#-como-restaurar-o-original-de-fábrica)
-7. [Sistema de Backup Modular e Segurança](#-sistema-de-backup-modular-e-segurança)
-8. [Diretórios do Sistema](#-diretórios-no-computador)
-9. [Padrão de Terminologia Oficial](#-padrão-de-terminologia-oficial)
-10. [Créditos e Autoria](#-créditos-e-autoria)
+2. [Vídeo Tutorial & Demonstração](#-vídeo-tutorial--demonstração)
+3. [O que Foi Traduzido](#-o-que-foi-traduzido)
+4. [Destaque Tecnológico: Patcher Dinâmico](#-destaque-tecnológico-patcher-dinâmico-automatizado)
+5. [Estrutura da Pasta](#-estrutura-da-pasta)
+6. [Como Instalar](#-como-instalar-em-2-cliques)
+7. [Como Restaurar o Original de Fábrica](#-como-restaurar-o-original-de-fábrica)
+8. [Sistema de Backup Modular e Segurança](#-sistema-de-backup-modular-e-segurança)
+9. [Diretórios do Sistema](#-diretórios-no-computador)
+10. [Padrão de Terminologia Oficial](#-padrão-de-terminologia-oficial)
+11. [Créditos e Autoria](#-créditos-e-autoria)
 
 ---
 
