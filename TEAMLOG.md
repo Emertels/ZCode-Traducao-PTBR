@@ -11,6 +11,7 @@
 - O usuário detalhou a sequência Nova tarefa em PT-BR → Idle-time task → Automações → Nova tarefa em inglês → abrir projeto → Nova tarefa volta a PT-BR. A prioridade de `document.documentElement.lang` foi uma regressão: o atributo podia indicar inglês com interface PT-BR, desligando o mapa dinâmico dos atalhos e descrições. Essa prioridade foi removida; a detecção voltou à preferência do ZCode e ao fallback do sistema. Os títulos Automações/Fluxos de trabalho permanecem no mapa.
 - Confirmadas as traduções dos quatro cartões de automação e das duas frases enviadas pelo usuário: “Summarize the events of the week every Friday” e “Please analyze the following terminal error log…”. Incluídas variantes sem ponto final para o texto dinâmico.
 - Incluída a tradução do estado vazio `No rewards yet` na página de recompensas.
+- Conferidas as descrições completas de `pptx`, `skill-creator` e `xlsx` nos pacotes instalados e no cache oficial local; as cópias correspondem ao texto dos cartões. As entradas completas agora precedem as traduções de prefixo no mapa dinâmico, para evitar cartões parcialmente traduzidos.
 
 - Causa identificada para descrições que ficavam em português no ZCode em inglês: versões anteriores do instalador alteravam diretamente arquivos `SKILL.md`, arquivos `visual-judge.md` e catálogos JSON do Marketplace.
 - O patch auxiliar agora consulta o `auxiliary-manifest.json` e o backup da versão para desfazer somente valores conhecidos que tenham sido escritos pelo tradutor. Os demais campos e alterações locais são preservados.

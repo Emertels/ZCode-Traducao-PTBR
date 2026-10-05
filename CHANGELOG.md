@@ -14,6 +14,7 @@
 - Revertida a tentativa de usar `document.documentElement.lang` como fonte prioritária: essa propriedade permanecia em inglês em algumas telas PT-BR e desligava as traduções dinâmicas dos atalhos e descrições. O patch voltou a usar a preferência do ZCode e, quando apropriado, o idioma do sistema.
 - O usuário confirmou que as correções dos atalhos e descrições das outras telas estão funcionando; a regressão visual dos atalhos foi identificada nesta atualização e corrigida no código-fonte, aguardando nova instalação para confirmação.
 - O atalho `Idle-time task` agora é reaplicado em atualizações de nós e atributos reutilizados pelo React (`title`, `aria-label` e `placeholder`).
+- Traduzidas por completo as descrições das habilidades `pptx`, `skill-creator` e `xlsx`, usando as descrições integrais encontradas tanto nos pacotes instalados quanto no cache ZCode (versões de cache correspondentes).
 - Fallback seguro de locale na API de campanhas de bônus, preservando integridade das consultas de benefícios e resgate.
 
 ### Idioma e Localização
