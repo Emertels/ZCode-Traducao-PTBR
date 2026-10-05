@@ -6,6 +6,10 @@
 - Corrigida a detecção do idioma nos preloads: qualquer preferência explícita diferente de português (incluindo inglês e chinês) agora desativa a tradução PT-BR; o idioma do sistema só é consultado em modo automático ou sem preferência salva.
 - Corrigida a tradução intermitente dos textos dinâmicos: os observadores agora tratam alterações de texto em nós existentes e traduzem somente valores exatos do mapa, sem percorrer novamente toda a interface.
 - Incluídas traduções para os títulos "Reward tasks" e "Your referrals" e para outros rótulos da página de indicações.
+- Corrigida a ponte de idioma da página de indicações: o contexto remoto aceita apenas `en-US` e `zh-CN`, então `pt-BR` é normalizado para `en-US` no conteúdo remoto enquanto o preload mantém os textos da interface em português. O usuário confirmou que a página de benefícios carrega.
+- Ampliadas as traduções da página carregada: banner de campanha, aviso de status, cabeçalhos, estados vazios e histórico. Textos incorporados em imagens podem continuar no idioma original.
+- Corrigida a tradução dinâmica após navegar por Automações e voltar a Nova tarefa: o detetor considera o idioma renderizado no documento, e inclui os rótulos `Automations`/`Automation` e `Workflows`/`Workflow`.
+- O atalho `Idle-time task` agora é reaplicado em atualizações de nós e atributos reutilizados pelo React (`title`, `aria-label` e `placeholder`).
 - Fallback seguro de locale na API de campanhas de bônus, preservando integridade das consultas de benefícios e resgate.
 
 ### Idioma e Localização
