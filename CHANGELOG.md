@@ -8,7 +8,11 @@
 - Incluídas traduções para os títulos "Reward tasks" e "Your referrals" e para outros rótulos da página de indicações.
 - Corrigida a ponte de idioma da página de indicações: o contexto remoto aceita apenas `en-US` e `zh-CN`, então `pt-BR` é normalizado para `en-US` no conteúdo remoto enquanto o preload mantém os textos da interface em português. O usuário confirmou que a página de benefícios carrega.
 - Ampliadas as traduções da página carregada: banner de campanha, aviso de status, cabeçalhos, estados vazios e histórico. Textos incorporados em imagens podem continuar no idioma original.
-- Corrigida a tradução dinâmica após navegar por Automações e voltar a Nova tarefa: o detetor considera o idioma renderizado no documento, e inclui os rótulos `Automations`/`Automation` e `Workflows`/`Workflow`.
+- Traduzido o estado vazio do histórico de recompensas: `No rewards yet` → `Nenhuma recompensa ainda`.
+- Incluídos no mapa dinâmico os títulos `Automations`/`Automation` e `Workflows`/`Workflow`.
+- Confirmadas no mapa PT-BR as descrições dos quatro modelos de automação exibidos na tela, incluindo “Summarize the events of the week every Friday” e a instrução completa de análise de erros do terminal; também são aceitas variantes sem ponto final.
+- Revertida a tentativa de usar `document.documentElement.lang` como fonte prioritária: essa propriedade permanecia em inglês em algumas telas PT-BR e desligava as traduções dinâmicas dos atalhos e descrições. O patch voltou a usar a preferência do ZCode e, quando apropriado, o idioma do sistema.
+- O usuário confirmou que as correções dos atalhos e descrições das outras telas estão funcionando; a regressão visual dos atalhos foi identificada nesta atualização e corrigida no código-fonte, aguardando nova instalação para confirmação.
 - O atalho `Idle-time task` agora é reaplicado em atualizações de nós e atributos reutilizados pelo React (`title`, `aria-label` e `placeholder`).
 - Fallback seguro de locale na API de campanhas de bônus, preservando integridade das consultas de benefícios e resgate.
 

@@ -408,7 +408,9 @@ if (h0Start !== -1 && y0Start !== -1) {
             "PPT Creation": "Criação de Apresentação PPT",
             "Idle-time task": "Tarefa em Tempo Ocioso",
             "Summarize the events of the week every Friday.": "Resuma os acontecimentos da semana toda sexta-feira.",
+            "Summarize the events of the week every Friday": "Resuma os acontecimentos da semana toda sexta-feira.",
             "Please analyze the following terminal error log, find the root cause of the error, and provide a sample of fix code that can be run directly.": "Analise o seguinte log de erro do terminal, localize a causa raiz do erro e forneça um exemplo de código de correção que possa ser executado diretamente.",
+            "Please analyze the following terminal error log, find the root cause of the error, and provide a sample of fix code that can be run directly": "Analise o seguinte log de erro do terminal, localize a causa raiz do erro e forneça um exemplo de código de correção que possa ser executado diretamente.",
             "Summarize commits, module changes, CI status, and follow-ups since the previous workday, then produce a concise morning report.": "Resuma commits, mudanças de módulos, status de CI e acompanhamentos desde o último dia útil e gere um relatório matinal conciso.",
             "Inspect code changes from the last 24 hours for high-confidence risks involving runtime failures, data loss, or missing dependencies.": "Inspecione mudanças de código das últimas 24 horas em busca de riscos de alta confiança envolvendo falhas em tempo de execução, perda de dados ou dependências ausentes.",
             "Organize PRs and commits merged this week into Features, Fixes, Experience improvements, and Remaining risks, linking to merge evidence.": "Organize PRs e commits mesclados esta semana em Recursos, Correções, Melhorias de experiência e Riscos restantes, com links de comprovação.",
@@ -564,15 +566,6 @@ if (preloadCode) {
     const domTranslator = `
     try {
         function _isPtBrActive() {
-            // The rendered locale follows the active React route more closely than a stale stored preference.
-            try {
-                const pageLanguage = document.documentElement?.lang;
-                if (typeof pageLanguage === "string" && pageLanguage.trim()) {
-                    const normalizedPageLanguage = pageLanguage.trim().toLowerCase();
-                    if (normalizedPageLanguage.startsWith("pt")) return true;
-                    if (normalizedPageLanguage.startsWith("en") || normalizedPageLanguage.startsWith("zh")) return false;
-                }
-            } catch (e) {}
             try {
                 const preference = window.localStorage?.getItem("zcode-locale-preference");
                 if (typeof preference === "string" && preference.trim()) {
@@ -609,7 +602,9 @@ if (preloadCode) {
             "Release brief": "Resumo de lançamento",
             "Documentation sync check": "Verificação de sincronização de documentação",
             "Summarize the events of the week every Friday.": "Resuma os acontecimentos da semana toda sexta-feira.",
+            "Summarize the events of the week every Friday": "Resuma os acontecimentos da semana toda sexta-feira.",
             "Please analyze the following terminal error log, find the root cause of the error, and provide a sample of fix code that can be run directly.": "Analise o seguinte log de erro do terminal, localize a causa raiz do erro e forneça um exemplo de código de correção que possa ser executado diretamente.",
+            "Please analyze the following terminal error log, find the root cause of the error, and provide a sample of fix code that can be run directly": "Analise o seguinte log de erro do terminal, localize a causa raiz do erro e forneça um exemplo de código de correção que possa ser executado diretamente.",
             "Summarize commits, module changes, CI status, and follow-ups since the previous workday, then produce a concise morning report.": "Resuma commits, mudanças de módulos, status de CI e acompanhamentos desde o último dia útil e gere um relatório matinal conciso.",
             "Summarize commits, module changes, CI status, and follow-ups since the previous workday, then produce no more than five stand-up-ready bullets. Perform read-only analysis using only verifiable repository facts; state when evidence is insufficient, do not speculate, and do not modify code or external state.": "Resuma os commits, alterações de módulos, status de CI e acompanhamentos desde o último dia útil e gere no máximo cinco tópicos prontos para a reunião de alinhamento (stand-up). Realize uma análise somente leitura utilizando exclusivamente fatos verificáveis do repositório; informe quando as evidências forem insuficientes, não especule e não modifique código ou estado externo.",
             "Inspect code changes from the last 24 hours for high-confidence risks involving runtime failures, data loss, or missing dependencies.": "Inspecione mudanças de código das últimas 24 horas em busca de riscos de alta confiança envolvendo falhas em tempo de execução, perda de dados ou dependências ausentes.",
@@ -1109,6 +1104,7 @@ try {
         "Progress": "Progresso",
         "Reward": "Recompensa",
         "No reward tasks": "Nenhuma tarefa de recompensa",
+        "No rewards yet": "Nenhuma recompensa ainda",
         "Friend": "Amigo",
         "Status": "Situação",
         "Friend’s reward": "Recompensa do amigo",
