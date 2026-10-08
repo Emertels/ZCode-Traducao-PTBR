@@ -17,18 +17,29 @@ Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR)
 
 ---
 
+## 📸 Demonstração Visual
+
+<p align="center">
+  <img src="assets/zcode_config_ptbr.png" alt="Painel Geral e Configurações do ZCode em Português" width="95%">
+  <br>
+  <em>Painel Geral, idioma da interface, modos de codificação e terminal 100% em Português do Brasil</em>
+</p>
+
+---
+
 ## 📋 Índice
 1. [Sobre o Pacote](#-sobre-o-pacote)
 2. [Vídeo Tutorial & Demonstração](#-vídeo-tutorial--demonstração)
-3. [O que Foi Traduzido](#-o-que-foi-traduzido)
-4. [Destaque Tecnológico: Patcher Dinâmico](#-destaque-tecnológico-patcher-dinâmico-automatizado)
-5. [Estrutura da Pasta](#-estrutura-da-pasta)
-6. [Como Instalar](#-como-instalar-em-2-cliques)
-7. [Como Restaurar o Original de Fábrica](#-como-restaurar-o-original-de-fábrica)
-8. [Sistema de Backup Modular e Segurança](#-sistema-de-backup-modular-e-segurança)
-9. [Diretórios do Sistema](#-diretórios-no-computador)
-10. [Padrão de Terminologia Oficial](#-padrão-de-terminologia-oficial)
-11. [Créditos e Autoria](#-créditos-e-autoria)
+3. [Demonstração Visual](#-demonstração-visual)
+4. [O que Foi Traduzido](#-o-que-foi-traduzido)
+5. [Destaque Tecnológico: Patcher Dinâmico](#-destaque-tecnológico-patcher-dinâmico-automatizado)
+6. [Estrutura da Pasta](#-estrutura-da-pasta)
+7. [Como Instalar](#-como-instalar-em-2-cliques)
+8. [Como Restaurar o Original de Fábrica](#-como-restaurar-o-original-de-fábrica)
+9. [Sistema de Backup Modular e Segurança](#-sistema-de-backup-modular-e-segurança)
+10. [Diretórios do Sistema](#-diretórios-no-computador)
+11. [Padrão de Terminologia Oficial](#-padrão-de-terminologia-oficial)
+12. [Créditos e Autoria](#-créditos-e-autoria)
 
 ---
 
