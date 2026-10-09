@@ -118,6 +118,9 @@ Diferente de métodos manuais que substituem o `app.asar` por uma versão antiga
    - Configurar as preferências de idioma em `setting.json` para `pt-BR`.
 3. Ao concluir, pressione `S` para abrir o ZCode com a tradução PT-BR aplicada!
 
+> [!NOTE]
+> **Atualizações do aplicativo:** Sempre que o ZCode Desktop receber uma atualização oficial, os arquivos originais serão reinstalados pelo próprio aplicativo. Para continuar usando em português, basta executar o `Instalar-Traducao.bat` novamente após a atualização.
+
 ---
 
 ## 🔄 Como Restaurar o Original de Fábrica
