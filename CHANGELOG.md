@@ -1,4 +1,72 @@
+### Textos da página de Recompensas — ZCode 3.15.3 — 14/10/2026
+- Traduzidos os rótulos que ainda apareciam em inglês na página de indicações: link, copiar link, compartilhar imagem, tarefas e nomes das recompensas.
+- Adicionada tradução dinâmica para contadores de novos usuários indicados e metas semanais ou da campanha, incluindo valores numéricos variáveis.
+
+### Recompensas e marketplace — ZCode 3.15.3 — 14/10/2026
+- Corrigida a ponte da tela Recompensas: o contexto local aceita `pt-BR`, mas envia `en-US` ao conteúdo remoto, mantendo a localização visual feita pelo preload. O patch reconhece o serializador usado nesta compilação e interrompe a geração se não reconhecer a estrutura, em vez de deixar a tela de recompensas sem contexto.
+- Ampliadas as traduções dinâmicas dos novos itens do marketplace vistos nas capturas: Showcase, Hyper3D Rodin, MCP App Dev, Disk Cleaner, Video2code, Video Agent Kit, Blender, Excalidraw, OpenPencil, Tripo 3D, Visualize e itens de finanças, incluindo nomes e descrições em inglês e chinês.
+- O pacote precisa ser reinstalado com o ZCode fechado para carregar a correção; a instância atualmente aberta não é alterada por esta edição.
+
 # Histórico de Alterações
+
+### Seletor de idioma e detecção automática — ZCode 3.15.3 — 14/10/2026
+- Corrigidos os seletores de idioma das Configurações Gerais e da barra lateral para exibir “Português (Brasil)” na compilação 3.15.3.
+- Corrigidos os schemas centrais de preferências para aceitar e persistir `pt-BR`, preservando os catálogos originais de inglês e chinês.
+- “Padrão do sistema” agora prioriza o locale `pt-*` do Windows antes do fallback `en-US` do serviço do ZCode.
+- O instalador confirma que `locale` e `localePreference` foram gravados em `pt-BR`; se não conseguir, informa erro em vez de declarar sucesso.
+- Gerado e inspecionado um ASAR temporário da versão 3.15.3. O aplicativo instalado não foi substituído nesta correção.
+
+### Teste no ZCode 3.15.3 — 14/10/2026
+- O usuário confirmou que testou o instalador e o restaurador; os dois reconhecem corretamente os estados traduzido e original e estão funcionando.
+
+
+### Acentuação do instalador — ZCode — 14/10/2026
+- Adicionado BOM UTF-8 a `aplicar-traducao.ps1`, que o Windows PowerShell 5.1 interpretava como ANSI, causando textos como `TRADUÃ‡ÃƒO`. Nenhum `chcp 65001` foi acrescentado aos lançadores.
+- Corrigida a acentuação de duas mensagens de diagnóstico do patcher Node. Nenhuma string de interface foi alterada.
+
+### Reconhecimento da tradução aplicada — ZCode — 13/10/2026
+- Quando o ASAR já tem a marca PT-BR, o backup limpo da versão é válido e `locale`/`localePreference` já estão em `pt-BR`, o instalador agora informa que a tradução está aplicada e encerra sem reaplicar nem fechar o aplicativo.
+- Se só a preferência estiver incompleta, o fluxo de reparo continua reconstruindo a partir do backup limpo. A restauração original permanece inalterada.
+
+### Compatibilidade com ZCode 3.15.3 — 13/10/2026
+- Atualizada a estrutura do diálogo “Sobre” para o catálogo e resolvedor `QS`/`bu` da versão 3.15.3. Foram adicionadas 7 strings em PT-BR: título, rótulo da versão, botão, otimização para Apple Silicon, direitos autorais, nome do aplicativo e crédito.
+- Corrigidos os seletores do locale do sistema e da API de campanhas para os identificadores usados nessa versão; inglês e chinês permanecem disponíveis, e a API remota recebe `en-US` quando a interface está em PT-BR.
+- A checagem de segunda execução agora reconhece o marcador PT-BR do diálogo “Sobre” junto ao preload. Corrigida também a leitura de `setting.json` com BOM UTF-8.
+- A interface de recompensas continua localizada pelo preload; o esquema local dessa compilação agora aceita `pt-BR`. Nenhuma tradução do catálogo principal foi contada novamente nesta correção.
+
+### Verificação da instalação atual — 13/10/2026
+- Conferido o ZCode instalado no computador: permanece na versão 3.15.3. A varredura do catálogo IntlProvider mapeou 6.313 mensagens em inglês e encontrou 0 lacunas por ID ou texto.
+
+### Console e consistência do pacote — 13/10/2026
+- Lançadores CMD e scripts PowerShell foram configurados para UTF-8, preservando acentos e cedilhas.
+- Esta revisão não adiciona strings à interface do ZCode.
+
+## [Em desenvolvimento] — ZCode 3.15.3 (13/10/2026)
+
+### Correção da busca de instalações — 13/10/2026
+- Instalador e restaurador validam primeiro caminhos do processo, registro e locais conhecidos; só quando nenhum candidato válido contém ZCode.exe e `resources\app.asar` iniciam a busca profunda em unidades fixas e removíveis. A busca ignora pastas raiz do sistema e junctions, deduplica caminhos, mantém instalações distintas selecionáveis e não usa a barra sobreposta do PowerShell. Mantenha `Find-Installations.ps1` ao lado dos scripts.
+- A busca mostra a unidade atual, o número de pastas verificadas e as candidatas encontradas; não segue junctions/reparse points para evitar ciclos. Por cobrir todo o volume, pode levar mais tempo em discos grandes ou externos.
+- Esta correção altera apenas a localização: 0 novas strings de interface foram adicionadas nesta etapa.
+
+### Busca em camadas sem barra sobreposta — 13/10/2026
+- O instalador e o restaurador validam primeiro caminhos obtidos do processo, registro e locais conhecidos. Só se nenhum contiver `ZCode.exe` e `resources\app.asar` fazem busca profunda em unidades fixas/removíveis.
+- A busca profunda ignora pastas de sistema na raiz e junctions, valida o executável junto com `resources\app.asar`, deduplica caminhos e mantém instalações distintas selecionáveis. O progresso aparece no título da janela; a barra `Write-Progress` foi removida.
+- Esta melhoria altera a busca, não a interface: 0 novas strings.
+
+
+- Corrigido o diálogo “Sobre” da versão 3.15.1, que continuava em chinês porque a compilação mudou o catálogo de `Jb` para `ZS`. O patch agora reconhece essa estrutura, usa PT-BR para locales não ingleses e traduz o nome do aplicativo, a versão, os direitos autorais e o botão; o inglês continua preservado.
+- Corrigida a deduplicação do instalador e restaurador: caminhos encontrados por fontes diferentes são normalizados antes de aparecer no seletor; instalações em pastas distintas continuam selecionáveis.
+- Busca automática ampliada para localizar `ZCode.exe` recursivamente em todas as unidades montadas, inclusive discos externos; cada resultado é validado por `resources\app.asar`.
+- Traduzidas duas mensagens ainda visíveis na tela inicial do Composer — o placeholder “Plan, Build...” e a orientação sobre mensagens durante a execução — no mapa DOM do ZCode. A orientação cobre duas pontuações e o formato misto da captura (quatro padrões literais no total, contando o placeholder); esses textos não fazem parte da contagem de 225 novas chaves do `IntlProvider`.
+- Corrigidos 5 textos de saída do patcher com acentos em “módulo”, “configurações”, “possível”, “injeção” e “código”; nenhuma nova string da interface foi adicionada nesta correção.
+- Ajustado o patch de idioma para a estrutura `IntlProvider` do ZCode 3.15.1: o catálogo PT-BR é adicionado ao mapa de idiomas e a validação aceita `pt-BR`; o patcher deve abortar sem alterar o ASAR se a estrutura esperada não for localizada.
+
+### Compatibilidade, localização e restauração
+- Auditado o catálogo `IntlProvider` da versão ZCode 3.15.1.8093: 225 mensagens sem tradução foram adicionadas ao dicionário PT-BR; nova varredura: 0 mensagens sem tradução por ID ou texto (6312 mensagens em inglês mapeadas).
+- Adicionadas traduções para grupos e tópicos de bots, permissões do navegador, câmera/microfone, fluxos de trabalho, subagentes, visualizações interativas, Highspeed, rede, plugins e configurações.
+- O instalador e o restaurador verificam `ZCode.exe` e `resources\app.asar`, procurando cópias pelo processo, locais conhecidos, registro do Windows e busca recursiva em todas as unidades montadas, inclusive externas.
+- Quando mais de uma cópia válida é encontrada, os dois scripts pedem que o usuário escolha a instalação. Caminhos informados manualmente são validados antes de qualquer alteração; Enter informa que o ZCode pode não estar instalado.
+- A restauração continua usando o backup imutável correspondente à versão detectada. A detecção do caminho não substitui nem ignora a validação do backup.
 
 ## [1.1.0] - 2026-10-05
 

@@ -1,5 +1,5 @@
 ﻿# ==============================================================================
-#  Restaurador do ZCode Original de Fabrica
+#  Restaurador do ZCode Original de fábrica
 #  Pacote de Tradução por: Emerson Teles
 # ==============================================================================
 $utf8Console = New-Object System.Text.UTF8Encoding($false)
@@ -17,15 +17,15 @@ function Read-OpenChoice([string]$Prompt) {
         if ($key.Key -eq [ConsoleKey]::Escape) { Write-Host 'Esc'; return $false }
     }
 }
-$Host.UI.RawUI.WindowTitle = "Restaurar ZCode Original - Emerson Teles"
+$Host.UI.RawUI.WindowTitle = "Restaurador PT-BR - ZCode - Emerson Teles"
 
 function Write-Header {
     Clear-Host
     Write-Host ""
-    Write-Host " ==================================================================== " -ForegroundColor Yellow
+    Write-Host " ==================================================================== " -ForegroundColor Cyan
     Write-Host "           RESTAURAR ZCODE ORIGINAL DE FÁBRICA                        " -ForegroundColor White
     Write-Host "              Pacote de Tradução por: Emerson Teles                   " -ForegroundColor Cyan
-    Write-Host " ==================================================================== " -ForegroundColor Yellow
+    Write-Host " ==================================================================== " -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -101,6 +101,7 @@ function Restore-ZCodeFile {
 }
 
 function Find-ZCodeInstallation {
+    . (Join-Path $PSScriptRoot 'Find-Installations.ps1')
     $candidates = @()
 
     $proc = Get-Process -Name "ZCode" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -131,25 +132,47 @@ function Find-ZCodeInstallation {
         } catch { }
     }
 
-    $drives = Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root
-    foreach ($d in $drives) {
-        $candidates += (Join-Path $d "ZCode")
-        $candidates += (Join-Path $d "Programs\ZCode")
+    # Primeiro valida caminhos conhecidos; só faz busca profunda quando nenhum deles serve.
+    $quickValid = @($candidates | Where-Object {
+        $candidatePath = ([string]$_).Trim().Trim('"')
+        (Test-Path -LiteralPath (Join-Path $candidatePath 'ZCode.exe') -PathType Leaf) -and
+        (Test-Path -LiteralPath (Join-Path $candidatePath 'resources\app.asar') -PathType Leaf)
+    } | Select-Object -Unique)
+    if ($quickValid.Count -gt 0) {
+        $candidates = $quickValid
+    } else {
+        Write-Host "    Nenhum caminho conhecido validado; iniciando busca em todas as unidades..." -ForegroundColor DarkGray
+        $candidates += @(Find-ExecutableDirectoriesOnAllDrives -ExecutableName 'ZCode.exe' -ProductLabel 'ZCode' -ValidationRelativePath 'resources\app.asar')
     }
-
-    foreach ($cand in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
-        if ((Test-Path (Join-Path $cand "resources\app.asar")) -or (Test-Path (Join-Path $cand "ZCode.exe"))) {
-            return $cand
-        }
+    $candidates = @($candidates | Where-Object { $_ } | Select-Object -Unique)
+    $valid = @()
+    $seenPaths = @{}
+    foreach ($candidate in ($candidates | Where-Object { $_ })) {
+        try {
+            $normalized = [IO.Path]::GetFullPath(([string]$candidate).Trim().Trim('"'))
+            $resolved = (Resolve-Path -LiteralPath $normalized -ErrorAction Stop).Path.TrimEnd('\')
+            if (-not $seenPaths.ContainsKey($resolved) -and
+                (Test-Path -LiteralPath (Join-Path $resolved 'resources\app.asar') -PathType Leaf) -and
+                (Test-Path -LiteralPath (Join-Path $resolved 'ZCode.exe') -PathType Leaf)) {
+                $seenPaths[$resolved] = $true
+                $valid += $resolved
+            }
+        } catch {}
     }
-
+    if ($valid.Count -eq 1) { return $valid[0] }
+    if ($valid.Count -gt 1) {
+        Write-Host '[i] Mais de uma instalação válida do ZCode foi encontrada:' -ForegroundColor Yellow
+        for ($i = 0; $i -lt $valid.Count; $i++) { Write-Host "    [$($i + 1)] $($valid[$i])" -ForegroundColor Cyan }
+        do { $choice = Read-Host 'Digite o número da instalação a restaurar'; $selection = 0 } while (-not [int]::TryParse($choice, [ref]$selection) -or $selection -lt 1 -or $selection -gt $valid.Count)
+        return $valid[$selection - 1]
+    }
     return $null
 }
 
-# Inicio
+# Início
 Write-Header
 
-# 1. Fechar processos
+# 1. oechar processos
 $running = Get-Process | Where-Object { $_.ProcessName -like "*zcode*" }
 if ($running) {
     Write-Host "[-] Fechando processos do ZCode..." -ForegroundColor Yellow
@@ -163,13 +186,13 @@ $zcodeDir = Find-ZCodeInstallation
 
 while (-not $zcodeDir -or -not (Test-Path $zcodeDir)) {
     Write-Host ""
-    Write-Host "[!] Não foi possivel detectar o ZCode automaticamente." -ForegroundColor Yellow
-    $userInput = Read-Host "Digite ou cole a pasta onde o ZCode esta instalado"
+    Write-Host "[!] Não foi possível detectar o ZCode automaticamente." -ForegroundColor Yellow
+    $userInput = (Read-Host "Digite ou cole a pasta onde o ZCode está instalado (Enter para sair)").Trim().Trim('"')
     if ([string]::IsNullOrWhiteSpace($userInput)) {
         Write-Host "[x] Operacao cancelada." -ForegroundColor Red
         Exit 1
     }
-    if (Test-Path (Join-Path $userInput "resources")) {
+    if ((Test-Path -LiteralPath (Join-Path $userInput "resources\app.asar") -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $userInput "ZCode.exe") -PathType Leaf)) {
         $zcodeDir = $userInput
     } else {
         Write-Host "[x] Pasta invalida!" -ForegroundColor Red
@@ -180,7 +203,7 @@ Write-Host "    -> ZCode localizado em: $zcodeDir" -ForegroundColor Green
 $resourcesDir = Join-Path $zcodeDir "resources"
 $targetAsar = Join-Path $resourcesDir "app.asar"
 
-# Pasta padronizada de backup dentro do diretorio do programa
+# Pasta padronizada de backup dentro do diretório do programa
 $backupDir = Join-Path $zcodeDir "_backups"
 
 $detectedVersion = $null
@@ -225,7 +248,7 @@ if (-not $foundBackup) {
         Write-Host "    Nenhum backup precisou ser criado para confirmar o estado original." -ForegroundColor Cyan
         Write-Host ""
         if (Test-Path -LiteralPath $exePath -PathType Leaf) {
-            if (Read-OpenChoice "Deseja abrir o ZCode original? [S = abrir | N/Enter/Esc = fechar]: ") {
+            if (Read-OpenChoice "Deseja abrir o ZCode? [S = sim | N/Enter/Esc = sair]: ") {
                 Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`""
             }
         }
@@ -428,9 +451,9 @@ if (-not (Test-Path $registryBackup)) {
 # Conclusao
 Write-Host ""
 if ($restoreIncomplete) {
-    Write-Host " ==================================================================== " -ForegroundColor Yellow
-    Write-Host "       RESTAURAÇÃO PARCIAL: VERIFIQUE OS AVISOS ACIMA                  " -ForegroundColor Yellow
-    Write-Host " ==================================================================== " -ForegroundColor Yellow
+    Write-Host " ==================================================================== " -ForegroundColor Cyan
+    Write-Host "       RESTAURAÇÃO PARCIAL: VERIoIQUE OS AVISOS ACIMA                  " -ForegroundColor Yellow
+    Write-Host " ==================================================================== " -ForegroundColor Cyan
     Write-Host "  O arquivo principal foi processado, mas nem todos os itens auxiliares voltaram." -ForegroundColor Yellow
 } elseif ($restoreChanged) {
     Write-Host " ==================================================================== " -ForegroundColor Green
@@ -447,13 +470,13 @@ Write-Host ""
 
 $exePath = Join-Path $zcodeDir "ZCode.exe"
 if (Test-Path $exePath) {
-    if (Read-OpenChoice "Deseja abrir o ZCode original? [S = abrir | N/Enter/Esc = fechar]: ") {
+    if (Read-OpenChoice "Deseja abrir o ZCode? [S = sim | N/Enter/Esc = sair]: ") {
         Write-Host "Iniciando ZCode de forma independente..." -ForegroundColor Cyan
         Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`""
         Start-Sleep -Milliseconds 400
         Exit 0
     } else {
-        Write-Host "Restauração concluída. Finalizando..." -ForegroundColor Gray
+        Write-Host "Restauração concluída. oinalizando..." -ForegroundColor Gray
         Start-Sleep -Milliseconds 300
         Exit 0
     }

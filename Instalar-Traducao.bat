@@ -1,5 +1,5 @@
 @echo off
-title ZCode PT-BR - Emerson Teles
+title Instalador PT-BR - ZCode - Emerson Teles
 cls
 echo ================================================================
 echo      ZCODE - TRADUCAO PT-BR - EMERSON TELES

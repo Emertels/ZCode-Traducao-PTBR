@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const { execSync, execFileSync } = require("child_process");
 
 console.log("====================================================================");
-console.log("      PATCHER DINAMICO AUTOMATIZADO ZCODE PT-BR - EMERSON TELES     ");
+console.log("      PATCHER DINÂMICO AUTOMATIZADO ZCODE PT-BR - EMERSON TELES     ");
 console.log("====================================================================");
 
 const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
@@ -87,7 +87,7 @@ function isAlreadyTranslatedAsar(filePath) {
         const h = JSON.parse(hBuf.toString("utf8"));
         const bOff = 8 + s2;
         
-        // A detecção exige as duas marcas próprias do patch: módulo principal e preload.
+        // A detecção usa marcas próprias estáveis do módulo principal e do preload.
         const mainEntry = h.files && h.files.out && h.files.out.files && h.files.out.files.main && h.files.out.files.main.files && h.files.out.files.main.files["index.js"];
         const prelEntry = h.files && h.files.out && h.files.out.files && h.files.out.files.preload && h.files.out.files.preload.files && h.files.out.files.preload.files["index.cjs"];
         let mainTranslated = false;
@@ -95,7 +95,10 @@ function isAlreadyTranslatedAsar(filePath) {
         if (mainEntry) {
             const mBuf = Buffer.alloc(mainEntry.size);
             fs.readSync(fd, mBuf, 0, mainEntry.size, bOff + parseInt(mainEntry.offset, 10));
-            mainTranslated = mBuf.toString("utf8").includes("Emerson Teles");
+            const mainCode = mBuf.toString("utf8");
+            mainTranslated = mainCode.includes("Emerson Teles") ||
+                mainCode.includes('"pt-BR":{aboutTitle:"Sobre o ZCode"') ||
+                mainCode.includes('Aplicativo do ZCode para desktop');
         }
         if (prelEntry) {
             const pBuf = Buffer.alloc(prelEntry.size);
@@ -196,7 +199,7 @@ function getCleanFile(p) {
 }
 
 // A. Patch out/main/index.js (Dialogo Sobre, Creditos e Explorador de Arquivos)
-console.log("[*] Aplicando patch no modulo principal: out/main/index.js");
+console.log("[*] Aplicando patch no módulo principal: out/main/index.js");
 let mainCode = getCleanFile("out/main/index.js");
 if (!mainCode) {
     console.error("[x] Erro: out/main/index.js não encontrado.");
@@ -215,7 +218,13 @@ if (mainCode.includes(aboutCredit)) {
     mainCode = mainCode.replace('nL=312', 'nL=345');
     console.log(`    -> Crédito '${aboutCredit}' injetado abaixo dos direitos reservados no diálogo Sobre.`);
 } else {
-    console.warn("[!] O ponto de inserção do crédito não foi localizado no diálogo Sobre desta compilação.");
+    const aboutCopyrightMarkup = '            <div>${fr(e.copyright)}</div>';
+    if (mainCode.includes(aboutCopyrightMarkup) && !mainCode.includes(aboutCredit)) {
+        mainCode = mainCode.replace(aboutCopyrightMarkup, `${aboutCopyrightMarkup}\n            <div style="margin-top:6px;font-size:12px;font-weight:400;color:#00adb5;letter-spacing:0.02em;text-align:left;">${aboutCredit}</div>`);
+        console.log(`    -> Crédito '${aboutCredit}' adicionado ao diálogo Sobre atual.`);
+    } else {
+        console.log("    -> O modelo do crédito do diálogo Sobre não precisou de alteração nesta compilação.");
+    }
 }
 
 // Preservar o rótulo original do seletor de editores externos: uma troca
@@ -224,14 +233,32 @@ if (mainCode.includes(aboutCredit)) {
 const ptAboutObj = '{aboutTitle:"Sobre o ZCode",versionLabel:"versão",okButtonLabel:"OK",optimizedForAppleSilicon:"Otimizado para Apple Silicon.",copyright:s(e=>`Todos os direitos reservados \\xA9 ${e} ZCode.`,"copyright")}';
 const jbNeedle = 'Jb={"zh-CN":';
 const jbIdx = mainCode.indexOf(jbNeedle);
+let aboutLocalePatched = false;
 if (jbIdx !== -1) {
     const jbEnd = mainCode.indexOf(';function Be(', jbIdx);
     if (jbEnd !== -1) {
         const originalJb = mainCode.slice(jbIdx, jbEnd);
         const newJb = `${originalJb.slice(0, -1)},"pt-BR":${ptAboutObj}}`;
         mainCode = mainCode.substring(0, jbIdx) + newJb + mainCode.substring(jbEnd);
+        aboutLocalePatched = true;
         console.log("    -> Janela Sobre traduzida em pt-BR; catálogos en-US e zh-CN preservados.");
     }
+}
+
+// Compilações recentes mudaram o nome do catálogo do About. Localize o mapa
+// pelo conjunto das entradas e acrescente PT-BR sem alterar inglês ou chinês.
+if (!aboutLocalePatched) {
+    const aboutMapStart = mainCode.indexOf('QS={', mainCode.indexOf('"ZCode Desktop App"'));
+    const aboutMapEnd = aboutMapStart >= 0 ? mainCode.indexOf('};function Fe(', aboutMapStart) : -1;
+    if (aboutMapStart >= 0 && aboutMapEnd >= 0) {
+        const ptObject = ',"pt-BR":{aboutTitle:"Sobre o ZCode",versionLabel:"versão",okButtonLabel:"OK",optimizedForAppleSilicon:"Otimizado para Apple Silicon.",copyright:s(e=>`Todos os direitos reservados \\xA9 ${e} ZCode.`,"copyright")}';
+        mainCode = mainCode.slice(0, aboutMapEnd) + ptObject + mainCode.slice(aboutMapEnd);
+        aboutLocalePatched = true;
+        console.log("    -> Catálogo PT-BR do diálogo Sobre adicionado à estrutura atual do ZCode.");
+    }
+}
+if (!aboutLocalePatched) {
+    console.warn("[!] A estrutura do catálogo Sobre não foi reconhecida; confira as strings de About antes de instalar.");
 }
 
 // O About é aberto no processo principal, cujo locale nativo não inclui pt-BR.
@@ -242,6 +269,32 @@ const aboutLocaleLocalized = 'function gl(e){return Jb[String(e).toLowerCase().s
 if (mainCode.includes(aboutLocaleNeedle)) {
     mainCode = mainCode.replace(aboutLocaleNeedle, aboutLocaleLocalized);
     console.log("    -> Diálogo Sobre usa PT-BR no fallback não inglês e mantém o catálogo inglês.");
+}
+
+const modernAboutLocaleNeedle = 'function hu(e){return ZS[e]??ZS[st]}';
+const modernAboutLocaleLocalized = 'function hu(e){return String(e).toLowerCase().startsWith("en")?ZS["en-US"]:(ZS["pt-BR"]??ZS[e]??ZS[st])}';
+if (mainCode.includes(modernAboutLocaleNeedle)) {
+    mainCode = mainCode.replace(modernAboutLocaleNeedle, modernAboutLocaleLocalized);
+    console.log("    -> About usa PT-BR em locales não ingleses e mantém o catálogo inglês.");
+}
+
+const modernAboutNameNeedle = 'jS({applicationName:G0,appVersion:o.appVersion';
+const modernAboutNameLocalized = 'jS({applicationName:String(t).toLowerCase().startsWith("en")?G0:"Aplicativo do ZCode para desktop",appVersion:o.appVersion';
+if (mainCode.includes(modernAboutNameNeedle)) {
+    mainCode = mainCode.replace(modernAboutNameNeedle, modernAboutNameLocalized);
+    console.log("    -> Nome do aplicativo no diálogo Sobre localizado em PT-BR.");
+}
+const currentAboutLocaleNeedle = 'function bu(e){return QS[e]??QS[ct]}';
+const currentAboutLocaleLocalized = 'function bu(e){return QS[String(e).toLowerCase().startsWith("en")?"en-US":"pt-BR"]??QS[ct]}';
+if (mainCode.includes(currentAboutLocaleNeedle)) {
+    mainCode = mainCode.replace(currentAboutLocaleNeedle, currentAboutLocaleLocalized);
+    console.log("    -> Diálogo Sobre usa PT-BR nos locales não ingleses e mantém o inglês.");
+}
+const currentAboutNameNeedle = 'applicationName:j0,appVersion:o.appVersion';
+const currentAboutNameLocalized = 'applicationName:String(t).toLowerCase().startsWith("en")?j0:"Aplicativo do ZCode para desktop",appVersion:o.appVersion';
+if (mainCode.includes(currentAboutNameNeedle)) {
+    mainCode = mainCode.replace(currentAboutNameNeedle, currentAboutNameLocalized);
+    console.log("    -> Nome do aplicativo no diálogo Sobre traduzido condicionalmente para PT-BR.");
 }
 const aboutAppNameNeedle = 'applicationName:rL,appVersion:n.appVersion';
 const aboutAppNameLocalized = 'applicationName:String(t).toLowerCase().startsWith("en")?rL:"Aplicativo do ZCode para desktop",appVersion:n.appVersion';
@@ -278,12 +331,12 @@ if (mainCode.includes(indicatorOriginal)) {
     console.log("    -> Indicador de Computer Use traduzido somente em pt-BR.");
 }
 
-// A.1 Patch out/main/chunk-*.js (Modulo de Menus da Barra de Titulo, Dock e Bandeja)
+// A.1 Patch out/main/chunk-*.js (Módulo de Menus da Barra de Título, Dock e Bandeja)
 const cMainNode = cleanHeader.files.out.files.main.files;
 const desktopMenuChunkName = Object.keys(cMainNode).find(f => f.startsWith("chunk-") && f.endsWith(".js") && getCleanFile("out/main/" + f)?.includes('tray.menu.openZCode'));
 let desktopMenuChunkCode = desktopMenuChunkName ? getCleanFile("out/main/" + desktopMenuChunkName) : null;
 if (desktopMenuChunkCode) {
-    console.log(`[*] Aplicando patch no modulo de menus do sistema: out/main/${desktopMenuChunkName}`);
+    console.log(`[*] Aplicando patch no módulo de menus do sistema: out/main/${desktopMenuChunkName}`);
     const ptDesktopMenu = {
         "titleBar.menu.file": "Arquivo",
         "titleBar.menu.edit": "Editar",
@@ -351,13 +404,16 @@ if (desktopMenuChunkCode) {
         'function ik(t,n){return(eh[t]??eh[fs]??eh["en-US"])[n]}'
     );
 
-    // O seletor da interface já oferece pt-BR, mas o schema central rejeita
-    // esse valor ao validar setting.json, causando fallback para inglês ao abrir.
-    const localeSchemaNeedle = '_o=e.enum(["zh-CN","en-US"]),ov=e.enum(["system","zh-CN","en-US"])';
-    const localeSchemaLocalized = '_o=e.enum(["zh-CN","en-US","pt-BR"]),ov=e.enum(["system","zh-CN","en-US","pt-BR"])';
+    // Permitir pt-BR no locale salvo e na preferência "System default".
+    // Não alterar os schemas de campanhas, que aceitam somente en-US/zh-CN.
+    const localeSchemaNeedle = 'Or=e.enum(["zh-CN","en-US"]),G_=e.enum(["system","zh-CN","en-US"])';
+    const localeSchemaLocalized = 'Or=e.enum(["zh-CN","en-US","pt-BR"]),G_=e.enum(["system","zh-CN","en-US","pt-BR"])';
     if (desktopMenuChunkCode.includes(localeSchemaNeedle)) {
         desktopMenuChunkCode = desktopMenuChunkCode.replace(localeSchemaNeedle, localeSchemaLocalized);
-        console.log("    -> Schema de configurações aceita e persiste pt-BR como idioma inicial.");
+        console.log("    -> Schemas de locale e preferência aceitam Português (Brasil), preservando inglês e chinês.");
+    } else if (!desktopMenuChunkCode.includes(localeSchemaLocalized)) {
+        console.error("[x] Schema de idioma da compilação atual não reconhecido; instalação cancelada para evitar ocultar ou rejeitar pt-BR.");
+        process.exit(1);
     }
 }
 
@@ -369,26 +425,39 @@ if (!stylesFileName) {
     console.error("[x] Erro: arquivo styles-*.js não encontrado.");
     process.exit(1);
 }
-console.log(`[*] Aplicando patch no modulo de estilos e configuracoes: out/renderer/assets/${stylesFileName}`);
+console.log(`[*] Aplicando patch no módulo de estilos e configurações: out/renderer/assets/${stylesFileName}`);
 let stylesCode = getCleanFile("out/renderer/assets/" + stylesFileName);
 
-// 1. Adicionar opcao pt-BR no dropdown de Configuracoes Gerais
-const gOptTarget = '(0,$.jsx)(kk,{value:`en-US`,"data-testid":Pa(ii,`en-US`),children:me.formatMessage({id:`settings.locale.en-US`})})';
-const gOptReplacement = gOptTarget + ',(0,$.jsx)(kk,{value:`pt-BR`,"data-testid":Pa(ii,`pt-BR`),children:me.formatMessage({id:`settings.locale.pt-BR`})})';
-if (stylesCode.includes(gOptTarget) && !stylesCode.includes('`settings.locale.pt-BR`')) {
-    stylesCode = stylesCode.replace(gOptTarget, gOptReplacement);
-    console.log("    -> Adicionada opcao 'Português (Brasil)' nas Configuracoes Gerais.");
+// 1. Adicionar opção pt-BR no dropdown de Configurações Gerais
+const gOptTargets = [
+    { target: '(0,$.jsx)(Vf,{value:`en-US`,"data-testid":Oa(Pa,`en-US`),children:G.formatMessage({id:`settings.locale.en-US`})})', component: 'Vf', testId: 'Oa(Pa,`pt-BR`)', intl: 'G' },
+    { target: '(0,$.jsx)(kk,{value:`en-US`,"data-testid":Pa(ii,`en-US`),children:me.formatMessage({id:`settings.locale.en-US`})})', component: 'kk', testId: 'Pa(ii,`pt-BR`)', intl: 'me' }
+];
+const gOptMatch = gOptTargets.find(item => stylesCode.includes(item.target));
+if (gOptMatch && !stylesCode.includes('value:`pt-BR`,"data-testid":' + gOptMatch.testId)) {
+    const gOptReplacement = gOptMatch.target + ',(0,$.jsx)(' + gOptMatch.component + ',{value:`pt-BR`,"data-testid":' + gOptMatch.testId + ',children:' + gOptMatch.intl + '.formatMessage({id:`settings.locale.pt-BR`})})';
+    stylesCode = stylesCode.replace(gOptMatch.target, gOptReplacement);
+    console.log("    -> Adicionada opção 'Português (Brasil)' nas Configurações Gerais.");
+} else if (!gOptMatch && !stylesCode.includes('value:`pt-BR`,"data-testid":')) {
+    console.error("[x] Seletor de idioma das Configurações Gerais não reconhecido; instalação cancelada.");
+    process.exit(1);
 }
 
-// 2. Adicionar opcao pt-BR no dropdown da Barra Lateral
-const sOptTarget = '(0,$.jsx)(DA,{value:`zh-CN`,children:v.formatMessage({id:`sidebar.settings.locale.zh-CN`})})';
-const sOptReplacement = sOptTarget + ',(0,$.jsx)(DA,{value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})})';
-if (stylesCode.includes(sOptTarget) && !stylesCode.includes('`sidebar.settings.locale.pt-BR`')) {
-    stylesCode = stylesCode.replace(sOptTarget, sOptReplacement);
-    console.log("    -> Adicionada opcao 'Português (Brasil)' na Barra Lateral.");
+// 2. Adicionar opção pt-BR no dropdown da Barra Lateral
+const sOptTargets = [
+    { target: '(0,$.jsx)(U_,{value:`zh-CN`,children:v.formatMessage({id:`sidebar.settings.locale.zh-CN`})})', component: 'U_' },
+    { target: '(0,$.jsx)(DA,{value:`zh-CN`,children:v.formatMessage({id:`sidebar.settings.locale.zh-CN`})})', component: 'DA' }
+];
+const sOptMatch = sOptTargets.find(item => stylesCode.includes(item.target));
+if (sOptMatch && !stylesCode.includes('(0,$.jsx)(' + sOptMatch.component + ',{value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})})')) {
+    stylesCode = stylesCode.replace(sOptMatch.target, sOptMatch.target + ',(0,$.jsx)(' + sOptMatch.component + ',{value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})})');
+    console.log("    -> Adicionada opção 'Português (Brasil)' na Barra Lateral.");
+} else if (!sOptMatch && !stylesCode.includes('value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})')) {
+    console.error("[x] Seletor rápido de idioma da barra lateral não reconhecido; instalação cancelada.");
+    process.exit(1);
 }
 
-// 3. Permitir selecao de pt-BR nos manipuladores de evento
+// 3. Permitir seleção de pt-BR nos manipuladores de evento
 stylesCode = stylesCode.replace(
     '(e===`zh-CN`||e===`en-US`)&&qR({input:{featureId:`settings.locale`',
     '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&qR({input:{featureId:`settings.locale`'
@@ -397,6 +466,14 @@ stylesCode = stylesCode.replace(
     '(e===`zh-CN`||e===`en-US`)&&G(e)',
     '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&G(e)'
 );
+stylesCode = stylesCode.replace(
+    '(e===`zh-CN`||e===`en-US`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})',
+    '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})'
+);
+if (stylesCode.includes('(e===`zh-CN`||e===`en-US`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`')) {
+    console.error("[x] Handler do seletor de idioma não aceitou pt-BR; instalação cancelada.");
+    process.exit(1);
+}
 
 // 4. Permitir pt-BR nos getters de localStorage
 stylesCode = stylesCode.replace(
@@ -493,11 +570,13 @@ console.log("[*] Mantidos os textos originais do host; descrições e erros são
 let hostCode = getCleanFile("out/host/index.js");
 // A API de campanhas aceita somente en-US e zh-CN. Mantemos pt-BR na interface,
 // mas consultamos a API de bônus com en-US e aceitamos pt-BR no relatório de resgate.
-const marketingLocaleEnum = 'var AN=_.enum(["zh-CN","en-US"])';
-const marketingLocaleHeader = '"X-Client-Language":AN.parse(o)';
-if (hostCode && hostCode.includes(marketingLocaleEnum) && hostCode.includes(marketingLocaleHeader)) {
-    hostCode = hostCode.replace(marketingLocaleEnum, 'var AN=_.enum(["zh-CN","en-US","pt-BR"])');
-    hostCode = hostCode.replace(marketingLocaleHeader, '"X-Client-Language":AN.parse(o==="pt-BR"?"en-US":o)');
+const marketingEnumMatch = hostCode && hostCode.match(/var (\w+)=([\w.]+)\.enum\(\["zh-CN","en-US"\]\)/);
+const marketingHeaderMatch = hostCode && hostCode.match(/"X-Client-Language":(\w+)\.parse\(o\)/);
+if (marketingEnumMatch && marketingHeaderMatch && marketingEnumMatch[1] === marketingHeaderMatch[1]) {
+    const enumName = marketingEnumMatch[1];
+    const enumNeedle = marketingEnumMatch[0];
+    hostCode = hostCode.replace(enumNeedle, enumNeedle.replace('["zh-CN","en-US"]', '["zh-CN","en-US","pt-BR"]'));
+    hostCode = hostCode.replace(marketingHeaderMatch[0], `"X-Client-Language":${enumName}.parse(o==="pt-BR"?"en-US":o)`);
     console.log("    -> Bônus: consultas e resgates pt-BR usam en-US somente no cabeçalho da API de campanhas.");
 } else {
     console.warn("[!] API de campanhas mudou; o fallback de locale do bônus não foi aplicado.");
@@ -517,7 +596,7 @@ if (!intlFileName) {
     console.error("[x] Erro: arquivo IntlProvider-*.js não encontrado.");
     process.exit(1);
 }
-console.log(`[*] Aplicando patch no provedor de internacionalizacao: out/renderer/assets/${intlFileName}`);
+console.log(`[*] Aplicando patch no provedor de internacionalização: out/renderer/assets/${intlFileName}`);
 let intlCode = getCleanFile("out/renderer/assets/" + intlFileName);
 
 // Fazer "Padrão do sistema" reconhecer Português quando o sistema operacional usa pt-*.
@@ -527,7 +606,14 @@ if (intlCode.includes(systemLocaleResolver)) {
     intlCode = intlCode.replace(systemLocaleResolver, localizedSystemLocaleResolver);
     console.log("    -> 'Padrão do sistema' agora resolve os idiomas pt-* para pt-BR.");
 } else {
-    console.warn("[!] O resolvedor de idioma do sistema mudou; não foi possível habilitar automaticamente o locale pt-BR.");
+    const currentSystemLocaleResolver = 'm=(0,i.useCallback)(()=>{let e=f();return e?e.toLowerCase().startsWith(`zh`)?`zh-CN`:`en-US`:t},[])';
+    const localizedCurrentSystemLocaleResolver = 'm=(0,i.useCallback)(()=>{let e=f();return e?e.toLowerCase().startsWith(`zh`)?`zh-CN`:e.toLowerCase().startsWith(`pt`)?`pt-BR`:`en-US`:t},[])';
+    if (intlCode.includes(currentSystemLocaleResolver)) {
+        intlCode = intlCode.replace(currentSystemLocaleResolver, localizedCurrentSystemLocaleResolver);
+        console.log("    -> Preferência Padrão do sistema reconhece idiomas pt-*.");
+    } else {
+        console.warn("[!] O resolvedor de idioma do sistema mudou; não foi possível habilitar automaticamente o locale pt-BR.");
+    }
 }
 const systemLocaleService = 'g=(0,i.useCallback)(async()=>{let e=await s?.();return y(e)?e:m()},[s,m])';
 const localizedSystemLocaleService = 'g=(0,i.useCallback)(async()=>{let e=f();if(e?.toLowerCase().startsWith(`pt`))return`pt-BR`;let n=await s?.();return y(n)?n:m()},[s,m])';
@@ -535,10 +621,20 @@ if (intlCode.includes(systemLocaleService)) {
     intlCode = intlCode.replace(systemLocaleService, localizedSystemLocaleService);
     console.log("    -> Prioridade do idioma pt-* do sistema sobre fallback en-US do serviço do ZCode.");
 } else {
-    console.warn("[!] O serviço de idioma do sistema mudou; confirme a resolução de pt-BR após atualizar o ZCode.");
+    const currentSystemLocaleService = 'h=(0,i.useCallback)(async()=>{let e=await s?.();return b(e)?e:m()},[s,m])';
+    const localizedCurrentSystemLocaleService = 'h=(0,i.useCallback)(async()=>{let e=f();if(String(e||``).toLowerCase().startsWith(`pt`))return`pt-BR`;let n=await s?.();return b(n)?n:m()},[s,m])';
+    if (intlCode.includes(currentSystemLocaleService)) {
+        intlCode = intlCode.replace(currentSystemLocaleService, localizedCurrentSystemLocaleService);
+        console.log("    -> Serviço atual do ZCode resolve o idioma do sistema pt-* para pt-BR.");
+    } else {
+        console.warn("[!] O serviço de idioma do sistema mudou; confirme a resolução de pt-BR após atualizar o ZCode.");
+    }
 }
 
+
 const matchCleanG = intlCode.match(/g=\{"zh-CN":(\w+),"en-US":(\w+)\}/);
+const modernIntlLocaleMap = 'g=r(),_={"zh-CN":m,"en-US":h},v=`zcode-locale-preference`,y=`state:locale`;';
+const modernIntlLocaleValidator = 'function b(e){return e===`zh-CN`||e===`en-US`}';
 if (matchCleanG) {
     const fullG = matchCleanG[0];
     const zhVar = matchCleanG[1];
@@ -555,8 +651,21 @@ if (matchCleanG) {
         `function y(e){return e===\`zh-CN\`||e===\`en-US\`||e===\`pt-BR\`}`
     );
     console.log("    -> Injetado dicionário PT-BR completo e funcional.");
+} else if (intlCode.includes(modernIntlLocaleMap) && intlCode.includes(modernIntlLocaleValidator)) {
+    const localeUiTranslations = {
+        "settings.locale.pt-BR": "Português (Brasil)",
+        "sidebar.settings.locale.pt-BR": "Português (Brasil)"
+    };
+    const dictJson = JSON.stringify(dict);
+    const localeUiJson = JSON.stringify(localeUiTranslations);
+    const localizedMap = 'g=r(),pt=Object.assign({},h,' + dictJson + ',' + localeUiJson + '),_={"zh-CN":Object.assign({},m,{"settings.locale.pt-BR":"葡萄牙语（巴西）","sidebar.settings.locale.pt-BR":"葡萄牙语（巴西）"}),"en-US":Object.assign({},h,{"settings.locale.pt-BR":"Portuguese (Brazil)","sidebar.settings.locale.pt-BR":"Portuguese (Brazil)"}),"pt-BR":pt},v=`zcode-locale-preference`,y=`state:locale`;';
+    intlCode = intlCode.replace(modernIntlLocaleMap, localizedMap);
+    intlCode = intlCode.replace(modernIntlLocaleValidator,
+        'function b(e){return e===`zh-CN`||e===`en-US`||e===`pt-BR`}'
+    );
+    console.log("    -> Catálogo PT-BR injetado no mapa IntlProvider da compilação atual; inglês e chinês preservados.");
 } else {
-    console.error("[x] Não foi possivel identificar o ponto de injecao no IntlProvider.");
+    console.error("[x] Não foi possível identificar o ponto de injeção no IntlProvider.");
     process.exit(1);
 }
 
@@ -570,24 +679,36 @@ if (usageCode) {
 // A ponte local da página de recompensas aceita somente en-US/zh-CN.
 // pt-BR é convertido para en-US nessa integração remota (a tradução visual
 // continua sendo feita pelo preload), para evitar rejeição do contexto.
-const rewardsBridgeFileName = Object.keys(cAssetsNode).find(f => f.startsWith("src-") && f.endsWith(".js") && getCleanFile("out/renderer/assets/" + f)?.includes('var XN=`persist:zcode-rewards`'));
+const rewardsBridgeFileName = Object.keys(cAssetsNode).find(f => f.startsWith("src-") && f.endsWith(".js") && getCleanFile("out/renderer/assets/" + f)?.includes('persist:zcode-rewards'));
 let rewardsBridgeCode = rewardsBridgeFileName ? getCleanFile("out/renderer/assets/" + rewardsBridgeFileName) : null;
 if (rewardsBridgeCode) {
-    const rewardsContextSchema = 'var XN=`persist:zcode-rewards`,ZN=O({theme:M([`zai-light`,`zai-dark`]),locale:M([`zh-CN`,`en-US`]),auth:';
-    const rewardsContextSchemaPt = 'var XN=`persist:zcode-rewards`,ZN=O({theme:M([`zai-light`,`zai-dark`]),locale:M([`zh-CN`,`en-US`,`pt-BR`]),auth:';
-    if (rewardsBridgeCode.includes(rewardsContextSchema)) {
-        rewardsBridgeCode = rewardsBridgeCode.replace(rewardsContextSchema, rewardsContextSchemaPt);
+    const rewardsSchemaStart = rewardsBridgeCode.indexOf('persist:zcode-rewards');
+    const rewardsLocaleSchema = rewardsSchemaStart >= 0 ? rewardsBridgeCode.slice(rewardsSchemaStart).match(/locale:g\(\[`zh-CN`,`en-US`\]\)/) : null;
+    if (rewardsLocaleSchema) {
+        const schemaIndex = rewardsSchemaStart + rewardsBridgeCode.slice(rewardsSchemaStart).indexOf(rewardsLocaleSchema[0]);
+        rewardsBridgeCode = rewardsBridgeCode.slice(0, schemaIndex) + rewardsLocaleSchema[0].replace('[`zh-CN`,`en-US`]', '[`zh-CN`,`en-US`,`pt-BR`]') + rewardsBridgeCode.slice(schemaIndex + rewardsLocaleSchema[0].length);
     }
-    const rewardsContextSerializer = 'function tP(e,t,n){let r=ZN.parse(e),i=';
-    const rewardsContextSerializerPt = 'function tP(e,t,n){let r=ZN.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i=';
-    if (rewardsBridgeCode.includes(rewardsContextSerializer)) {
-        rewardsBridgeCode = rewardsBridgeCode.replace(rewardsContextSerializer, rewardsContextSerializerPt);
+    const rewardsSerializers = [
+        ['function Of(e,t,n){let r=wf.parse(e),i=', 'function Of(e,t,n){let r=wf.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i='],
+        ['function tP(e,t,n){let r=ZN.parse(e),i=', 'function tP(e,t,n){let r=ZN.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i=']
+    ];
+    let rewardsSerializerPatched = false;
+    for (const [original, localized] of rewardsSerializers) {
+        if (rewardsBridgeCode.includes(localized)) { rewardsSerializerPatched = true; break; }
+        if (rewardsBridgeCode.includes(original)) {
+            rewardsBridgeCode = rewardsBridgeCode.replace(original, localized);
+            rewardsSerializerPatched = true;
+            break;
+        }
+    }
+    if (rewardsSerializerPatched) {
         console.log(`    -> Ponte de recompensas: contexto pt-BR normalizado para en-US no conteúdo remoto.`);
-    } else if (!rewardsBridgeCode.includes(rewardsContextSerializerPt)) {
-        console.warn("[!] A função serializadora do contexto da página de recompensas mudou; locale remoto não foi ajustado.");
+    } else {
+        console.error("[x] Não foi possível reconhecer o serializador do contexto de recompensas desta compilação.");
+        process.exit(1);
     }
 } else {
-    console.warn("[!] Bundle da ponte de recompensas não localizado; o locale do conteúdo remoto não foi ajustado.");
+    console.log("    -> A versão atual não contém ponte separada de recompensas neste bundle.");
 }
 
 // E. Patch out/preload/index.cjs (Tradução DOM dinâmica de botões de atalho e títulos)
@@ -617,6 +738,10 @@ if (preloadCode) {
             "Automation": "Automação",
             "Workflows": "Fluxos de trabalho",
             "Workflow": "Fluxo de trabalho",
+            "Plan, Build, / for skills, @ for context": "Planejar, Construir, / para habilidades, @ para contexto",
+            "Messages sent while Cursor is working can steer it mid-run without interrupting - turn it on under New Messages in Agents settings": "As mensagens enviadas enquanto o Cursor está trabalhando podem orientá-lo durante a execução sem interrompê-lo. Ative essa opção em Novas mensagens, nas configurações de Agentes.",
+            "Messages sent while Cursor is working can steer it mid-run without interrupting — turn it on under New Messages in Agents settings": "As mensagens enviadas enquanto o Cursor está trabalhando podem orientá-lo durante a execução sem interrompê-lo. Ative essa opção em Novas mensagens, nas configurações de Agentes.",
+            "Messages sent while Cursor is working can steer it mid-run without interrupting - turn it Ativado under Novo Messages in Agents configurações": "As mensagens enviadas enquanto o Cursor está trabalhando podem orientá-lo durante a execução sem interrompê-lo. Ative essa opção em Novas mensagens, nas configurações de Agentes.",
             "Scheduled task template": "Modelo de tarefa agendada",
             "Every weekday at 09:00": "Todos os dias úteis às 09:00",
             "Daily at 10:00": "Diariamente às 10:00",
@@ -914,7 +1039,95 @@ if (preloadCode) {
             "Developer Tools": "Ferramentas de desenvolvimento",
             "Utilities": "Utilitários",
             "Productivity": "Produtividade",
+            "Accounting & Reporting": "Contabilidade e Relatórios",
+            "核算与报告": "Contabilidade e Relatórios",
+            "Fixed Income & Credit": "Renda Fixa e Crédito",
+            "固收研究": "Renda Fixa e Crédito",
+            "Corporate Client Acquisition": "Prospecção de Clientes Empresariais",
+            "对公获客": "Prospecção de Clientes Empresariais",
+            "Deal Modeling": "Modelagem de Operações",
+            "Fund Research": "Análise de Fundos",
+            "基金研究": "Análise de Fundos",
+            "Macro & Strategy": "Macroeconomia e Estratégia",
+            "宏观策略": "Macroeconomia e Estratégia",
+            "Corporate FP&A": "Planejamento e Análise Financeira",
+            "经营分析": "Planejamento e Análise Financeira",
+            "Company Due Diligence": "Due diligence Empresarial",
+            "企业尽调": "Due diligence Empresarial",
+            "Position Monitoring": "Acompanhamento de Carteira",
+            "持仓跟踪": "Acompanhamento de Carteira",
+            "Equity Research": "Análise de Ações",
+            "权益研究": "Análise de Ações",
+            "同花顺": "RoyalFlush iFinD",
+            "金融聚合搜索": "Pesquisa Financeira Agregada",
+            "交易测算": "Modelagem de Operações",
+            "Wind 万得": "Wind",
+            "【企业财务】核算与报告:月结关账检查与阻断项、总账与明细账勾稽及交易级差异归因、科目映射与重分类、内部管理报表编制、三表勾稽复核": "Contabilidade e relatórios empresariais: verificações e pendências do fechamento mensal, conciliação do razão com os detalhes e análise de divergências por transação, mapeamento e reclassificação de contas, relatórios gerenciais e conferência das demonstrações financeiras.",
+            "【二级市场】固收研究:债券档案与估值、发行主体信用、收益率曲线与信用利差、信用风险跟踪": "Pesquisa de renda fixa: cadastro e avaliação de títulos, crédito dos emissores, curvas de rendimento e spreads de crédito, além do acompanhamento de riscos de crédito.",
+            "【一级市场与银行】对公营销:按区域/产业链/园区筛选目标客户、园区与集群扫描、商机线索、客户全景画像": "Prospecção para bancos empresariais: seleção de clientes por região, cadeia produtiva e parques; análise de polos, oportunidades comerciais e perfil completo dos clientes.",
+            "【一级市场与银行】交易测算:并购增厚/摊薄、资金来源与用途及形式资本结构、可比交易、募投与摊薄": "Modelagem de operações: análise de acréscimo ou diluição em fusões e aquisições, fontes e usos e estrutura de capital pro forma, transações comparáveis e captações de recursos.",
+            "【二级市场】基金选品:多条件筛选、基金与经理画像、持仓风格与重合度分析": "Análise de fundos: seleção por múltiplos critérios, perfis de fundos e gestores, estilos das carteiras e análise de sobreposição entre posições.",
+            "【二级市场】自上而下:宏观仪表盘、指数估值分位与盈利归因、大类资产配置观点、政策与产业规划跟踪": "Macroeconomia e estratégia: painéis macroeconômicos, percentis de avaliação de índices e atribuição de resultados, alocação entre classes de ativos e acompanhamento de políticas e planos industriais.",
+            "【企业财务】财务部与FP&A:管理报表、13周滚动现金流预测、预算差异分析、情景与盈亏平衡、投入决策测算、上市同业对标": "Finanças corporativas e planejamento: relatórios gerenciais, previsão contínua de fluxo de caixa de 13 semanas, análise de desvios orçamentários, cenários e ponto de equilíbrio, avaliação de investimentos e comparação com empresas listadas.",
+            "【一级市场与银行】企业排查:尽调报告、关联方与供应链图谱、失信涉诉质押风险快扫": "Análise de empresas: relatórios de due diligence, mapeamento de partes relacionadas e cadeias de fornecimento e verificação rápida de inadimplência, litígios, garantias e riscos.",
+            "【二级市场】持仓跟踪:自选股清单、带异动归因的盘后复盘、持仓事件分级提醒": "Acompanhamento de carteira: lista de ativos, análise após o fechamento com atribuição de movimentos e alertas classificados sobre eventos das posições.",
+            "【二级市场】研究产出:深度研报、行业分析、财报点评、DCF/LBO/三表估值模型": "Pesquisa de ações: relatórios aprofundados, análise de setores, comentários sobre resultados e modelos de avaliação DCF, LBO e demonstrações financeiras integradas.",
+            "同花顺股票、海外股票、指数、基金与债券数据 MCP 服务。": "Serviços MCP de dados da RoyalFlush iFinD sobre ações chinesas e globais, índices, fundos e títulos de dívida.",
+            "万得股票、海外股票、指数、基金、债券、宏观经济与公告研报数据 MCP 服务。": "Serviços MCP da Wind sobre ações chinesas e globais, índices, fundos, títulos de dívida, indicadores macroeconômicos, comunicados e relatórios de pesquisa.",
+            "天眼查企业信息查询 MCP 服务。": "Serviço MCP para consultas de informações empresariais no Tianyancha.",
+            "SEC EDGAR 文件检索与财经网页、新闻搜索 MCP 服务。": "Serviços MCP para pesquisar documentos da SEC EDGAR, notícias e informações financeiras na web.",
+            "Records WebM through ZCode's built-in Browser Use WebView and converts it to MP4 with ffmpeg for video/URL replication; no Playwright or external Chromium required.": "Grave WebM pela visualização integrada do Browser Use do ZCode e converta para MP4 com ffmpeg para reproduzir vídeos ou URLs, sem Playwright ou Chromium externo.",
+            "Explore MCP Apps capabilities, interactions, and lifecycle examples.": "Explore os recursos, as interações e exemplos de ciclo de vida dos MCP Apps.",
+            "Edit Blender scenes with an interactive 3D panel and MCP tools.": "Edite cenas do Blender com um painel 3D interativo e ferramentas MCP.",
+            "Create and edit diagrams with Excalidraw and MCP tools.": "Crie e edite diagramas com o Excalidraw e ferramentas MCP.",
+            "Edit design files with OpenPencil and MCP tools.": "Edite arquivos de design com o OpenPencil e ferramentas MCP.",
+            "Automated video editing toolkit: standard cloud speech transcription and synthesis, full video frame extraction and understanding, local re-inspection, timeline, preview rendering, QC, and TTS.": "Kit de edição automatizada de vídeo: transcrição e síntese de voz na nuvem, extração e análise de quadros, revisão local, linha do tempo, renderização de prévia, controle de qualidade e síntese de voz.",
+            "Generate textured, rig-ready 3D models from a text prompt or a reference image with Tripo, and export GLB/FBX/OBJ/STL/USDZ/3MF straight into your project. Connect your China-mainland Tripo account once in the browser (OAuth), no API key pasting.": "Gere modelos 3D texturizados e prontos para rigging com o Tripo a partir de texto ou imagem. Exporte GLB, FBX, OBJ, STL, USDZ ou 3MF diretamente para o projeto; conecte sua conta Tripo pelo navegador, sem inserir uma chave de API.",
+            "Create interactive explanations, charts and design previews in ZCode conversations.": "Crie explicações interativas, gráficos e prévias de design nas conversas do ZCode.",
             "Finance": "Finanças",
+            "Hyper3D Rodin": "Hyper3D Rodin",
+            "Generate 3D models from text or reference images with Hyper3D Rodin Gen-2.5, split completed models with BANG, and retrieve results.": "Gere modelos 3D a partir de texto ou imagens de referência com o Hyper3D Rodin Gen-2.5, divida modelos concluídos com o BANG e obtenha os resultados.",
+            "通过文字或参考图片生成 Hyper3D Rodin Gen-2.5 三维模型，使用 BANG 拆分已完成模型，并获取生成结果。": "Gere modelos 3D a partir de texto ou imagens de referência com o Hyper3D Rodin Gen-2.5, divida modelos concluídos com o BANG e obtenha os resultados.",
+            "Showcase": "Demonstrações",
+            "完整能力演示目录 SC01–SC53：基础插件 UI、App 内模型问答、取消、保活、浏览器存储、失败与隔离边界。": "Coleção de demonstrações SC01–SC53: interface básica de plugins, conversas com modelos em aplicativos, cancelamento, persistência, armazenamento do navegador, falhas e isolamento.",
+            "ZCode MCP App Dev": "Desenvolvimento de MCP Apps do ZCode",
+            "Develop MCP Apps for ZCode with official SDKs and a small host-extension reference.": "Desenvolva MCP Apps para o ZCode com os SDKs oficiais e uma referência compacta para extensões do host.",
+            "使用官方 SDK 开发 ZCode MCP App，附宿主扩展约定与独立构建指引。": "Desenvolva MCP Apps para o ZCode com os SDKs oficiais, convenções para extensões do host e orientações de compilação independente.",
+            "Disk Cleaner": "Limpeza de Disco",
+            "Analyze disk usage and large files, then review selected files before moving them to the system trash.": "Analise o uso do disco e os arquivos grandes; revise os itens selecionados antes de movê-los para a lixeira do sistema.",
+            "只读扫描目录占用与大文件，在侧栏逐项确认后移入系统回收站。": "Analisa somente a leitura o espaço usado por pastas e arquivos grandes; confirme cada item na barra lateral antes de movê-lo para a lixeira do sistema.",
+            "Video2code": "Vídeo para Código",
+            "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium": "Grava WebM pela visualização integrada do Browser Use do ZCode e converte para MP4 com ffmpeg para reproduzir vídeos ou URLs, sem Playwright ou Chromium externo.",
+            "Video Agent Kit": "Kit de Agente de Vídeo",
+            "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。": "Kit de edição automatizada de vídeo: transcrição e síntese de voz na nuvem, análise de quadros, revisão de trechos, linha do tempo, renderização de prévia, controle de qualidade e síntese de voz.",
+            "在 ZCode 对话旁打开 Blender 场景：Agent 修改物体、材质、相机并渲染预览；面板用 Three.js 轻量浏览。": "Abra cenas do Blender ao lado da conversa no ZCode. O agente pode modificar objetos, materiais e câmeras e renderizar prévias; o painel usa Three.js para visualização leve.",
+            "让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。": "Peça ao agente para criar diagramas e edite-os com o Excalidraw na barra lateral da conversa; selecione elementos, continue a edição e exporte.",
+            "在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。": "Edite arquivos de design Figma .fig do espaço de trabalho com o OpenPencil na barra lateral; o agente pode colaborar nas alterações, usar seleções como referência e gerar código.",
+            "用 Tripo 从一句话或一张图生成带贴图、可绑骨的 3D 模型，支持动画、减面与 GLB/FBX/OBJ/STL/USDZ/3MF 导出，文件直接落到项目里。浏览器里授权一次国内站 Tripo 账号即可使用，无需粘贴 API Key。": "Gere modelos 3D texturizados e prontos para rigging com o Tripo a partir de texto ou imagem. Exporte GLB, FBX, OBJ, STL, USDZ ou 3MF diretamente para o projeto; conecte sua conta Tripo pelo navegador, sem inserir uma chave de API.",
+            "Create interactive explanations, charts and design previews in ZCode conversations.": "Crie explicações interativas, gráficos e prévias de design nas conversas do ZCode.",
+            "通过 ZCode 内置 Browser Use WebView 录制 WebM，并使用 ffmpeg 转换为 MP4，用于视频或 URL 复刻；无需 Playwright 或外部 Chromium。": "Grave WebM pela visualização integrada do Browser Use do ZCode e converta para MP4 com ffmpeg para reproduzir vídeos ou URLs, sem Playwright ou Chromium externo.",
+            "Contabilidade e Relatórios": "Contabilidade e Relatórios",
+            "Fixed Income & Credit": "Renda Fixa e Crédito",
+            "Corporate Client Acquisition": "Prospecção de Clientes Empresariais",
+            "Deal Modeling": "Modelagem de Operações",
+            "Fund Research": "Análise de Fundos",
+            "Macro & Strategy": "Macroeconomia e Estratégia",
+            "Corporate FP&A": "Planejamento e Análise Financeira",
+            "Company Due Diligence": "Due diligence Empresarial",
+            "Position Monitoring": "Acompanhamento de Carteira",
+            "Equity Research": "Análise de Ações",
+            "核算与报告": "Contabilidade e Relatórios",
+            "固收研究": "Renda Fixa e Crédito",
+            "对公获客": "Prospecção de Clientes Empresariais",
+            "基金研究": "Análise de Fundos",
+            "宏观策略": "Macroeconomia e Estratégia",
+            "经营分析": "Planejamento e Análise Financeira",
+            "企业尽调": "Due diligence Empresarial",
+            "持仓跟踪": "Acompanhamento de Carteira",
+            "权益研究": "Análise de Ações",
+            "Wind 万得": "Wind",
+            "天眼查": "Tianyancha",
+            "金融聚合搜索": "Pesquisa Financeira Agregada",
             "Show less": "Mostrar menos",
             "Show more": "Mostrar mais",
             "Install": "Instalar",
@@ -1167,18 +1380,31 @@ try {
         "Copy Link": "Copiar link",
         "Rules Details": "Detalhes das regras",
         "Reward History": "Histórico de recompensas",
-        "Invite link": "Link de convite"
+        "Invite link": "Link de convite",
+        "Referral link": "Link de indicação",
+        "Copy link": "Copiar link",
+        "Share image": "Compartilhar imagem",
+        "Invite new users": "Convide novos usuários",
+        "Global Build": "Compilação Global",
+        "Weekend Build": "Compilação de Fim de Semana",
+        "Weekly Reset Card": "Cartão de Reinicialização Semanal"
     };
+    function _translateWvText(value) {
+        const trimmed = value.trim();
+        if (_wvMap[trimmed]) return value.replace(trimmed, _wvMap[trimmed]);
+        let translated = trimmed.replace(/^(\d+)\s+new users referred$/i, "$1 novos usuários indicados");
+        translated = translated.replace(/^Refer (\d+) new users this week$/i, "Indique $1 novos usuários nesta semana");
+        translated = translated.replace(/^Refer (\d+) new users this campaign$/i, "Indique $1 novos usuários nesta campanha");
+        return translated === trimmed ? value : value.replace(trimmed, translated);
+    }
     const _wvVisited = new WeakSet();
     function _transWv(node) {
         if (!_wvShouldTranslate() || !node || _wvVisited.has(node)) return;
         _wvVisited.add(node);
         if (node.nodeType === 3) {
-            const t = node.nodeValue ? node.nodeValue.trim() : "";
-            if (_wvMap[t] && _wvMap[t] !== t) {
-                const rep = node.nodeValue.replace(t, _wvMap[t]);
-                if (rep !== node.nodeValue) node.nodeValue = rep;
-            }
+            const value = node.nodeValue || "";
+            const translated = _translateWvText(value);
+            if (translated !== value) node.nodeValue = translated;
         } else if (node.nodeType === 1) {
             if (node.childNodes) {
                 for (let i = 0; i < node.childNodes.length; i++) {
@@ -1198,8 +1424,8 @@ try {
                 } else if (m.type === "characterData" && _wvShouldTranslate()) {
                     const textNode = m.target;
                     const value = textNode.nodeValue || "";
-                    const key = value.trim();
-                    if (_wvMap[key]) textNode.nodeValue = value.replace(key, _wvMap[key]);
+                    const translated = _translateWvText(value);
+                    if (translated !== value) textNode.nodeValue = translated;
                 }
             }
         });
@@ -1265,7 +1491,7 @@ try {
         fs.unlinkSync(tempCheckPreload);
     }
 
-    console.log("    [OK] Verificação sintatica ES Module de todos os modulos aprovada com 100% de integridade.");
+    console.log("    [OK] Verificação sintática ES Module de todos os módulos aprovada com 100% de integridade.");
 } catch (e) {
     try { fs.unlinkSync(tempCheckIntl); } catch {}
     try { fs.unlinkSync(tempCheckMain); } catch {}
@@ -1274,7 +1500,7 @@ try {
     try { fs.unlinkSync(tempCheckDesktopMenu); } catch {}
     try { fs.unlinkSync(tempCheckRewardsBridge); } catch {}
     try { fs.unlinkSync(tempCheckPreload); } catch {}
-    console.error("[x] Erro: O codigo gerado possui falhas de sintaxe e foi rejeitado para evitar quebra:", e.message);
+    console.error("[x] Erro: O código gerado possui falhas de sintaxe e foi rejeitado para evitar quebra:", e.message);
     process.exit(1);
 }
 
@@ -1291,7 +1517,7 @@ const patchedRewardsBuf = rewardsCode ? Buffer.from(rewardsCode, "utf8") : null;
 const patchedCodingPlanBuf = codingPlanCode ? Buffer.from(codingPlanCode, "utf8") : null;
 const cleanPkgBuf = Buffer.from(JSON.stringify(pkgObj, null, 2) + "\n", "utf8");
 
-// Escanear e reconstruir arvore completa do ASAR
+// Escanear e reconstruir árvore completa do ASAR
 function scan(node, prefix = "") {
     let items = [];
     for (const [k, v] of Object.entries(node.files || {})) {
@@ -1433,7 +1659,7 @@ for (const item of allItems) {
     }
 }
 
-// Serializar novo cabecalho
+// Serializar novo cabeçalho
 const newJsonStr = JSON.stringify(newHeader);
 const newJsonBuf = Buffer.from(newJsonStr, "utf8");
 const newJsonSize = newJsonBuf.length;
@@ -1478,7 +1704,7 @@ for (let i = 0; i < filesToWrite.length; i++) {
 fs.closeSync(cleanFd);
 fs.closeSync(outFd);
 
-// Atualizar app-pt.asar no diretorio do projeto
+// Atualizar app-pt.asar no diretório do projeto
 const projectPtAsar = path.join(scriptDir, "app-pt.asar");
 try {
     fs.copyFileSync(tempAsar, projectPtAsar);
@@ -1489,7 +1715,7 @@ try {
 fs.copyFileSync(tempAsar, srcAsar);
 try { fs.unlinkSync(tempAsar); } catch (e) { }
 
-// Atualizar configuracoes do usuario para pt-BR
+// Atualizar configurações do usuário para pt-BR
 const userConfigPaths = [
     path.join(process.env.USERPROFILE || "", ".zcode", "v2", "setting.json"),
     path.join(process.env.USERPROFILE || "", ".zcode", "setting.json")
@@ -1498,11 +1724,11 @@ const userConfigPaths = [
 for (const uPath of userConfigPaths) {
     if (fs.existsSync(uPath)) {
         try {
-            const uCfg = JSON.parse(fs.readFileSync(uPath, "utf8"));
+            const uCfg = JSON.parse(fs.readFileSync(uPath, "utf8").replace(/^\uFEFF/, ""));
             uCfg.locale = "pt-BR";
             uCfg.localePreference = "pt-BR";
             fs.writeFileSync(uPath, JSON.stringify(uCfg, null, 2), "utf8");
-            console.log(`    [OK] Configuracao atualizada para 'pt-BR' em: ${uPath}`);
+            console.log(`    [OK] Configuração atualizada para 'pt-BR' em: ${uPath}`);
         } catch (e) {
             console.warn(`    [!] Aviso ao atualizar ${uPath}:`, e.message);
         }

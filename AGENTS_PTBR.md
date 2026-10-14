@@ -8,7 +8,7 @@ Mantenha o pacote de localização do ZCode para Windows e os atalhos de instala
 - O backup bruto imutável fica dentro da pasta instalada: `<pasta-do-ZCode>\_backups\<versão>\app.asar`. Nunca o substitua por um arquivo traduzido nem use o backup de outra versão.
 - `_backups` é a única pasta de backup. Os instaladores e restauradores leem e gravam backups correspondentes à versão na raiz do programa instalado; a pasta do projeto mantém somente scripts, documentação e arquivos de tradução.
 - Nunca use o `app-pt.asar` do repositório como backup original nem para substituir uma instalação mais recente.
-- Se o ASAR instalado já estiver traduzido e não houver backup limpo da versão exata, interrompa antes de alterá-lo. Se o backup limpo existir, reconstrua a tradução a partir dele em cada execução.
+- Se o ASAR estiver traduzido, só informe que a instalação está concluída quando o backup limpo da versão exata e as preferências `locale`/`localePreference` em `pt-BR` forem confirmados; nesse caso, saia sem reaplicar nem fechar o ZCode. Se as preferências estiverem incompletas, reconstrua a tradução a partir do backup limpo. Se o backup não existir, interrompa sem alterar o ASAR.
 - `Restaurar-Original.bat` restaura o backup bruto correspondente à versão. Preserve os atalhos de instalar e restaurar com um clique.
 - `patch-plugins.cjs` e `patch-visual-judge.cjs` podem alterar arquivos de skills/plugins no perfil do usuário. Preserve cada original uma única vez na pasta de backup da versão com `tools/auxiliary-backup.cjs`; o restaurador só grava novamente dentro do perfil ZCode ou de `resources/glm` da instalação.
 
@@ -18,6 +18,14 @@ Mantenha o pacote de localização do ZCode para Windows e os atalhos de instala
 - `tools/scan-untranslated.cjs [app.asar-ou-pasta-instalada] [limite]` procura valores em inglês no `IntlProvider` da versão escolhida. O relatório contém candidatos; confira o contexto, pois pode incluir textos técnicos/de ajuda e nomes de produtos.
 - Atualize as variantes do README, `LEIA-ME.txt` e estas instruções quando o instalador, os backups ou as traduções mudarem.
 - Preserve o fluxo atual de instalação em um clique e não altere a versão oficial do aplicativo.
+
+<!-- zcode-3151-about-and-discovery -->
+## Compatibilidade do diálogo Sobre e busca de instalação
+- O diálogo Sobre do ZCode 3.15.3 usa o mapa/resolvedor `QS`/`bu`; versões anteriores podem usar `ZS`/`hu` ou `Jb`/`gl`. Preserve os três fallbacks e os catálogos originais de inglês e chinês ao atualizar.
+- O detector da segunda execução deve reconhecer a marca PT-BR do diálogo Sobre em conjunto com o preload. Com backup limpo válido e as duas preferências em `pt-BR`, a instalação repetida mostra que já está traduzido e sai sem reaplicar o pacote.
+- Instalador e restaurador devem usar os mesmos critérios de descoberta, normalização e deduplicação. Valide ZCode.exe e resources\app.asar; não confunda aliases de maiúsculas/minúsculas com instalações diferentes.
+- Instalador e restaurador validam primeiro caminhos do processo, registro e locais conhecidos; só quando nenhum candidato válido contém ZCode.exe e `resources\app.asar` iniciam a busca profunda em unidades fixas e removíveis. A busca ignora pastas raiz do sistema e junctions, valida também o arquivo-chave, deduplica caminhos, mantém instalações distintas selecionáveis e exibe o progresso no título da janela, nunca com `Write-Progress`. Mantenha `Find-Installations.ps1` ao lado dos scripts.
+<!-- /zcode-3151-about-and-discovery -->
 
 ## Verificação
 

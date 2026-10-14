@@ -15,25 +15,58 @@ function Read-OpenChoice([string]$Prompt) {
         if ($key.Key -eq [ConsoleKey]::Escape) { Write-Host 'Esc'; return $false }
     }
 }
-try { $Host.UI.RawUI.WindowTitle = "Instalador ZCode PT-BR - Emerson Teles" } catch {}
+try { $Host.UI.RawUI.WindowTitle = "Instalador PT-BR - ZCode - Emerson Teles" } catch {}
 
 function Find-ZCodeInstallation {
-    $candidates = @(
-        (Join-Path $env:LOCALAPPDATA "Programs\zcode"),
-        (Join-Path $env:ProgramFiles "ZCode"),
-        (Join-Path ${env:ProgramFiles(x86)} "ZCode")
-    )
-    foreach ($candidate in $candidates) {
-        if ($candidate -and (Test-Path (Join-Path $candidate "resources\app.asar"))) { return $candidate }
-    }
+    . (Join-Path $PSScriptRoot 'Find-Installations.ps1')
+    $candidates = @()
+    $proc = Get-Process -Name ZCode -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($proc -and $proc.Path) { $candidates += Split-Path -Parent $proc.Path }
+    $candidates += (Join-Path $env:LOCALAPPDATA "Programs\ZCode")
+    $candidates += (Join-Path $env:ProgramFiles "ZCode")
+    if (${env:ProgramFiles(x86)}) { $candidates += (Join-Path ${env:ProgramFiles(x86)} "ZCode") }
     foreach ($key in @(
         "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
         "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
     )) {
         foreach ($app in (Get-ItemProperty $key -ErrorAction SilentlyContinue)) {
-            if ($app.DisplayName -match "ZCode" -and $app.InstallLocation -and (Test-Path (Join-Path $app.InstallLocation "resources\app.asar"))) { return $app.InstallLocation }
+            if ($app.DisplayName -match "ZCode" -and $app.InstallLocation) { $candidates += $app.InstallLocation }
         }
+    }
+    # Primeiro valida caminhos conhecidos; só faz busca profunda quando nenhum deles serve.
+    $quickValid = @($candidates | Where-Object {
+        $candidatePath = ([string]$_).Trim().Trim('"')
+        (Test-Path -LiteralPath (Join-Path $candidatePath 'ZCode.exe') -PathType Leaf) -and
+        (Test-Path -LiteralPath (Join-Path $candidatePath 'resources\app.asar') -PathType Leaf)
+    } | Select-Object -Unique)
+    if ($quickValid.Count -gt 0) {
+        $candidates = $quickValid
+    } else {
+        Write-Host "    Nenhum caminho conhecido validado; iniciando busca em todas as unidades..." -ForegroundColor DarkGray
+        $candidates += @(Find-ExecutableDirectoriesOnAllDrives -ExecutableName 'ZCode.exe' -ProductLabel 'ZCode' -ValidationRelativePath 'resources\app.asar')
+    }
+    $candidates = @($candidates | Where-Object { $_ } | Select-Object -Unique)
+    $valid = @()
+    $seenPaths = @{}
+    foreach ($candidate in ($candidates | Where-Object { $_ })) {
+        try {
+            $normalized = [IO.Path]::GetFullPath(([string]$candidate).Trim().Trim('"'))
+            $resolved = (Resolve-Path -LiteralPath $normalized -ErrorAction Stop).Path.TrimEnd('\')
+            if (-not $seenPaths.ContainsKey($resolved) -and
+                (Test-Path -LiteralPath (Join-Path $resolved 'resources\app.asar') -PathType Leaf) -and
+                (Test-Path -LiteralPath (Join-Path $resolved 'ZCode.exe') -PathType Leaf)) {
+                $seenPaths[$resolved] = $true
+                $valid += $resolved
+            }
+        } catch {}
+    }
+    if ($valid.Count -eq 1) { return $valid[0] }
+    if ($valid.Count -gt 1) {
+        Write-Host '[i] Mais de uma instalação válida do ZCode foi encontrada:' -ForegroundColor Yellow
+        for ($i = 0; $i -lt $valid.Count; $i++) { Write-Host "    [$($i + 1)] $($valid[$i])" -ForegroundColor Cyan }
+        do { $choice = Read-Host 'Digite o número da instalação'; $selection = 0 } while (-not [int]::TryParse($choice, [ref]$selection) -or $selection -lt 1 -or $selection -gt $valid.Count)
+        return $valid[$selection - 1]
     }
     return $null
 }
@@ -50,7 +83,7 @@ function Write-InstallerHeader {
     Clear-Host
     Write-Host ''
     Write-Host ' ==================================================================== ' -ForegroundColor Cyan
-    Write-Host '                 TRADUÇÃO ZCODE PARA PORTUGUÊS DO BRASIL             ' -ForegroundColor Green
+    Write-Host '                 TRADUÇÃO ZCODE PARA PORTUGUÊS DO BRASIL             ' -ForegroundColor Cyan
     Write-Host '               Desenvolvido e Personalizado por: Emerson Teles       ' -ForegroundColor Yellow
     Write-Host ' ==================================================================== ' -ForegroundColor Cyan
     Write-Host ''
@@ -68,17 +101,15 @@ if (-not (Test-Path $patcher) -or -not (Test-Path $dictionary)) { Write-Host "[x
 Write-Host '[2/6] Procurando a instalação do ZCode...' -ForegroundColor White
 $zcodeDir = Find-ZCodeInstallation
 while (-not $zcodeDir) {
-    $inputPath = Read-Host "Cole a pasta de instalação do ZCode"
+    $inputPath = (Read-Host "Cole a pasta de instalação do ZCode (Enter para sair)").Trim().Trim('"')
     if ([string]::IsNullOrWhiteSpace($inputPath)) { Write-Host "Operação cancelada." -ForegroundColor Yellow; exit 1 }
-    if (Test-Path (Join-Path $inputPath "resources\app.asar")) { $zcodeDir = $inputPath } else { Write-Host "Pasta inválida: resources\app.asar não foi encontrado." -ForegroundColor Red }
+    if ((Test-Path -LiteralPath (Join-Path $inputPath "resources\app.asar") -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $inputPath "ZCode.exe") -PathType Leaf)) { $zcodeDir = $inputPath } else { Write-Host "Instalação inválida ou ZCode não instalado nesse caminho: ZCode.exe e resources\app.asar são necessários." -ForegroundColor Red }
 }
 $resources = Join-Path $zcodeDir "resources"
 $targetAsar = Join-Path $resources "app.asar"
 $exePath = Join-Path $zcodeDir "ZCode.exe"
 $version = Get-AppVersion $exePath
 if (-not $version) { Write-Host "[x] Não foi possível detectar a versão do ZCode.exe." -ForegroundColor Red; Pause; exit 1 }
-$running = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "*zcode*" }
-if ($running) { Write-Host "Fechando ZCode para aplicar a tradução..." -ForegroundColor Yellow; $running | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }
 Write-Host '[3/6] Verificando o backup original da versão...' -ForegroundColor White
 $backupDir = Join-Path $zcodeDir "_backups"
 $versionBackup = Join-Path $backupDir $version
@@ -86,6 +117,7 @@ $backupAsar = Join-Path $versionBackup "app.asar"
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) { Write-Host "[x] Node.js não foi encontrado. Instale o Node.js e execute novamente." -ForegroundColor Red; Pause; exit 1 }
 $verifier = Join-Path $scriptDir "tools\verify-clean-asar.cjs"
+$settingsPath = Join-Path $env:USERPROFILE ".zcode\v2\setting.json"
 & $node.Source $patcher $zcodeDir --detect-state
 $sourceState = $LASTEXITCODE
 $backupIsClean = $false
@@ -95,7 +127,26 @@ if (Test-Path -LiteralPath $backupAsar -PathType Leaf) {
 }
 if ($sourceState -eq 10) {
     if ($backupIsClean) {
-        Write-Host "[i] Tradução existente detectada. As alterações serão reaplicadas a partir do backup original limpo." -ForegroundColor Cyan
+        $settingsReady = $false
+        if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+            try {
+                $settings = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8).TrimStart([char]0xFEFF) | ConvertFrom-Json
+                $settingsReady = ([string]$settings.locale -ieq 'pt-BR' -and [string]$settings.localePreference -ieq 'pt-BR')
+            } catch {}
+        }
+        if ($settingsReady) {
+            Write-Host ''
+            Write-Host '====================================================================' -ForegroundColor Cyan
+            Write-Host '        O ZCODE JÁ ESTÁ TRADUZIDO PARA PORTUGUÊS DO BRASIL' -ForegroundColor Cyan
+            Write-Host '====================================================================' -ForegroundColor Cyan
+            Write-Host 'A tradução PT-BR já está aplicada; nenhuma alteração foi necessária.' -ForegroundColor Cyan
+            Write-Host "Backup original em inglês preservado em: $backupAsar" -ForegroundColor Gray
+            if (Read-OpenChoice "Deseja abrir o ZCode? [S = sim | N/Enter/Esc = sair]: ") {
+                Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`""
+            }
+            exit 0
+        }
+        Write-Host "[i] Marca PT-BR detectada; a preferência de idioma está incompleta e será reparada a partir do backup original." -ForegroundColor Cyan
         Write-Host "[i] Backup original em inglês preservado em: $backupAsar" -ForegroundColor Cyan
     }
     else {
@@ -120,8 +171,10 @@ if ((Test-Path -LiteralPath $backupAsar -PathType Leaf) -and -not $backupIsClean
 if ($sourceState -eq 11 -and $backupIsClean) {
     Write-Host "[i] Alteração parcial detectada; a tradução será refeita usando o backup original limpo." -ForegroundColor Cyan
 }
+$running = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "*zcode*" }
+if ($running) { Write-Host "Fechando ZCode para aplicar a tradução..." -ForegroundColor Yellow; $running | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }
+
 New-Item -ItemType Directory -Path $versionBackup -Force | Out-Null
-$settingsPath = Join-Path $env:USERPROFILE ".zcode\v2\setting.json"
 $settingsBackup = Join-Path $versionBackup "setting.json"
 if ($sourceState -eq 0 -and (Test-Path $settingsPath) -and -not (Test-Path $settingsBackup)) { Copy-Item -LiteralPath $settingsPath -Destination $settingsBackup }
 $locales = Join-Path $zcodeDir "locales"
@@ -186,7 +239,7 @@ if ($LASTEXITCODE -eq 10) {
     Write-Host "[i] ZCode já está traduzido para Português (Brasil). Nenhuma alteração necessária." -ForegroundColor Cyan
     Write-Host "[i] Backup original em inglês preservado." -ForegroundColor Cyan
     Write-Host "Backup original em inglês preservado em: $versionBackup\app.asar" -ForegroundColor Cyan
-    if (Read-OpenChoice "Deseja abrir o ZCode? [S = abrir | N/Enter/Esc = fechar]: ") {
+    if (Read-OpenChoice "Deseja abrir o ZCode? [S = sim | N/Enter/Esc = sair]: ") {
         Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`""
     }
     exit 0
@@ -209,11 +262,26 @@ if (Test-Path $glmCjs) {
 }
 if (Test-Path $settingsPath) {
     try {
-        $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $settingsJson = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8).TrimStart([char]0xFEFF)
+        $settings = $settingsJson | ConvertFrom-Json
         $settings | Add-Member -NotePropertyName locale -NotePropertyValue "pt-BR" -Force
         $settings | Add-Member -NotePropertyName localePreference -NotePropertyValue "pt-BR" -Force
-        $settings | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
-    } catch { Write-Host "[!] Não foi possível atualizar setting.json: $($_.Exception.Message)" -ForegroundColor Yellow }
+        $settingsJson = $settings | ConvertTo-Json -Depth 30
+        [IO.File]::WriteAllText($settingsPath, $settingsJson, [System.Text.UTF8Encoding]::new($false))
+        $savedSettings = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8).TrimStart([char]0xFEFF) | ConvertFrom-Json
+        if ([string]$savedSettings.locale -ine 'pt-BR' -or [string]$savedSettings.localePreference -ine 'pt-BR') { throw 'A preferência PT-BR não foi persistida.' }
+        Write-Host "    [OK] Idioma Português (Brasil) selecionado e persistido." -ForegroundColor Green
+    } catch {
+        Write-Host "[x] Não foi possível salvar e confirmar o idioma PT-BR em setting.json: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "    O ASAR foi atualizado, mas a instalação não será marcada como concluída. Feche o ZCode e execute o instalador novamente." -ForegroundColor Yellow
+        Pause
+        exit 1
+    }
+} else {
+    Write-Host "[x] Preferências do ZCode não foram encontradas em: $settingsPath" -ForegroundColor Red
+    Write-Host "    Abra o ZCode uma vez, feche-o e execute o instalador novamente para salvar Português (Brasil)." -ForegroundColor Yellow
+    Pause
+    exit 1
 }
 if ((Test-Path $enPak) -and -not (Test-Path $ptPak)) { Copy-Item -LiteralPath $enPak -Destination $ptPak }
 Write-Host '[5/6] Traduzindo skills e plugins (essa etapa pode demorar)...' -ForegroundColor White
@@ -235,4 +303,4 @@ Write-Host '[6/6] Tradução concluída.' -ForegroundColor White
 Write-Host "
 [OK] Tradução PT-BR instalada na versão $version." -ForegroundColor Green
 Write-Host "Backup original preservado em: $versionBackup" -ForegroundColor Gray
-if (Read-OpenChoice "Deseja abrir o ZCode? [S = abrir | N/Enter/Esc = fechar]: ") { Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`"" }
+if (Read-OpenChoice "Deseja abrir o ZCode? [S = sim | N/Enter/Esc = sair]: ") { Start-Process -FilePath "explorer.exe" -ArgumentList "`"$exePath`"" }

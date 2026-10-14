@@ -1,5 +1,5 @@
 @echo off
-title Restaurar ZCODE Original - Emerson Teles
+title Restaurador PT-BR - ZCode - Emerson Teles
 cls
 echo ================================================================
 echo      RESTAURAR ZCODE ORIGINAL - EMERSON TELES
