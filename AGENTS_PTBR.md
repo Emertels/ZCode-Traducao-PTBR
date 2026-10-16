@@ -23,6 +23,7 @@ Mantenha o pacote de localização do ZCode para Windows e os atalhos de instala
 ## Schema de idioma no host
 - Para o seletor PT-BR funcionar, permitir `pt-BR` nas enums `locale` e `localePreference` do serviço de configurações em `out/host/chunk-*.js`, além do seletor e do IntlProvider do renderer. O host valida `setting.json`; se rejeitar o valor, volta aos padrões `zh-CN`/`system` mesmo que a interface tenha oferecido Português.
 - O menu da bandeja é construído no processo principal; leia `localePreference` e `locale` de `~/.zcode/v2/setting.json` para resolver os rótulos. `app.getLocale()` sozinho retorna o locale do sistema e não acompanha a seleção dentro do ZCode.
+- No `IntlProvider`, `settingsLocalePreference` do serviço deve prevalecer sobre `storedPreference` do `localStorage`; um valor antigo pode divergir do `setting.json` e fazer o seletor reabrir em inglês/chinês apesar de a preferência atual ser `pt-BR`.
 ## Compatibilidade do diálogo Sobre e busca de instalação
 - O diálogo Sobre do ZCode 3.15.3 usa o mapa/resolvedor `QS`/`bu`; versões anteriores podem usar `ZS`/`hu` ou `Jb`/`gl`. Preserve os três fallbacks e os catálogos originais de inglês e chinês ao atualizar.
 - O detector da segunda execução deve reconhecer a marca PT-BR do diálogo Sobre em conjunto com o preload. Com backup limpo válido e as duas preferências em `pt-BR`, a instalação repetida mostra que já está traduzido e sai sem reaplicar o pacote.

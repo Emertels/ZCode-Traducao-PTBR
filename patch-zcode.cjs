@@ -711,6 +711,18 @@ if (matchCleanG) {
     intlCode = intlCode.replace(modernIntlLocaleValidator,
         'function b(e){return e===`zh-CN`||e===`en-US`||e===`pt-BR`}'
     );
+    // A preferência do settingService é a fonte atual da verdade. Em versões
+    // anteriores, o localStorage podia manter en-US/zh-CN e sobrepor o idioma
+    // que o usuário acabara de escolher ou que o instalador gravou em setting.json.
+    const localePreferenceResolver = 'function C({storedPreference:e,settingsLocale:t,settingsLocalePreference:n,preferSettingServiceLocale:r}){return r&&t?t:e??n??t??null}';
+    const localizedLocalePreferenceResolver = 'function C({storedPreference:e,settingsLocale:t,settingsLocalePreference:n,preferSettingServiceLocale:r}){return n??(r&&t?t:e??t??null)}';
+    if (intlCode.includes(localePreferenceResolver)) {
+        intlCode = intlCode.replace(localePreferenceResolver, localizedLocalePreferenceResolver);
+        console.log("    -> Preferência salva pelo ZCode tem prioridade sobre idioma antigo no armazenamento local.");
+    } else if (!intlCode.includes(localizedLocalePreferenceResolver)) {
+        console.error("[x] Resolvedor de preferência do IntlProvider não reconhecido; instalação cancelada.");
+        process.exit(1);
+    }
     console.log("    -> Catálogo PT-BR injetado no mapa IntlProvider da compilação atual; inglês e chinês preservados.");
 } else {
     console.error("[x] Não foi possível identificar o ponto de injeção no IntlProvider.");

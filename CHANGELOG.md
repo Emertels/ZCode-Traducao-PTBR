@@ -1,3 +1,8 @@
+### Preferência do seletor PT-BR — ZCode 3.15.3 — 16/10/2026
+- Corrigida a prioridade de idioma na inicialização: a preferência atual registrada pelo serviço de configurações do ZCode prevalece sobre um valor antigo de `localStorage`, que podia manter a interface em inglês mesmo com `setting.json` em `pt-BR`.
+- O patcher valida esse resolvedor do `IntlProvider` e aborta se a estrutura esperada não existir.
+- Refeito o pacote portátil v1.3.0 para substituir o ZIP da release existente.
+
 ### Textos da página de Recompensas — ZCode 3.15.3 — 14/10/2026
 - Traduzidos os rótulos que ainda apareciam em inglês na página de indicações: link, copiar link, compartilhar imagem, tarefas e nomes das recompensas.
 - Adicionada tradução dinâmica para contadores de novos usuários indicados e metas semanais ou da campanha, incluindo valores numéricos variáveis.

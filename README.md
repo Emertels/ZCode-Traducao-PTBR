@@ -15,6 +15,7 @@ Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR)
 ## Correção do seletor PT-BR — 16/10/2026
 
 - Corrigido o schema de idioma do serviço de configurações no processo host. Antes, a interface exibia e aceitava `pt-BR`, mas o host rejeitava o valor ao ler `setting.json` e o substituía por chinês/sistema. O patcher agora libera `pt-BR` tanto em `locale` quanto em `localePreference`.
+- Na inicialização, a preferência atual salva pelo ZCode agora prevalece sobre um idioma antigo em `localStorage`, que podia deixar o seletor marcado em inglês mesmo com `setting.json` em `pt-BR`.
 - O menu de contexto ao lado do relógio agora lê a preferência do ZCode; alternar entre português, inglês e chinês também troca os rótulos da bandeja.
 - Execute novamente `Instalar-Traducao.bat` com o ZCode fechado para aplicar a correção.
 
