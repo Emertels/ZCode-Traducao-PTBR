@@ -51,3 +51,7 @@ Mantenha o pacote de localização do ZCode para Windows e os atalhos de instala
 Sem backup da versão, o restaurador só informa em azul-turquesa que a restauração é desnecessária depois que o verificador confirma que o `app.asar` ativo está limpo e corresponde à versão instalada. Cada arquivo auxiliar é restaurado isoladamente; caminhos incompatíveis, ausentes ou com destino inesperado são mantidos e exibidos em amarelo. Se algum item falhar, o resultado final informa restauração parcial, nunca sucesso completo.
 ## Backup original ausente
 Se o backup original da versão não estiver em _backups, o restaurador não consegue reconstruir os arquivos de fábrica e deve informar que a restauração não é possível. Repare ou instale a versão oficial do aplicativo por cima da instalação existente, preservando os projetos e dados do perfil do usuário; depois execute novamente o instalador ou restaurador.
+# Atualização de 16/10/2026 — ZCode 3.15.3
+- O seletor rápido do perfil agora encaminha `pt-BR` ao serviço de configurações.
+- O menu da bandeja relê `localePreference`/`locale` a cada abertura e reconstrói os rótulos em clique direito, para refletir mudanças entre PT-BR, inglês e chinês.
+- A detecção de tradução completa exige os marcadores dos dois comportamentos para reinstalar builds incompletos com segurança a partir do backup limpo.

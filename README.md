@@ -1,4 +1,7 @@
 # 🤖 ZCode — Tradução para Português do Brasil (PT-BR) 🇧🇷
+### Compatibilidade com ZCode 3.15.3 — 16/10/2026
+Corrigido o seletor rápido de idioma do perfil, que mostrava Português (Brasil), mas não enviava `pt-BR` ao serviço de configurações. O menu de contexto da bandeja agora consulta a preferência atual e é reconstruído a cada clique direito, acompanhando Português (Brasil), inglês e chinês sem manter rótulos antigos.
+
 ### Compatibilidade com ZCode 3.15.3 — 14/10/2026
 O patcher acompanha as estruturas atuais do diálogo “Sobre”, da preferência de idioma do sistema e da API de campanhas. Foram acrescentadas 7 strings PT-BR do diálogo “Sobre”. A execução seguinte reconhece o marcador do ASAR e as preferências PT-BR, confirma o backup limpo da versão e sai sem reaplicar ou fechar o aplicativo; preferências incompletas são reparadas a partir do backup. Arquivos `setting.json` com BOM UTF-8 também são aceitos.
 

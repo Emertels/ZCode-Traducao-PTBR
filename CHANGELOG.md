@@ -14,6 +14,12 @@
 
 # Histórico de Alterações
 
+### Seletor rápido e menu da bandeja — ZCode 3.15.3 — 16/10/2026
+- Corrigido o manipulador do seletor de idioma no menu do perfil: a opção `pt-BR` agora é enviada ao serviço de configurações, em vez de ser ignorada.
+- O menu do ícone da bandeja agora resolve a preferência de idioma atual no momento da abertura e é reconstruído ao clicar com o botão direito. Português (Brasil), inglês e chinês acompanham a seleção ativa.
+- A detecção de instalação completa agora exige os dois ajustes; instalações com o patch antigo são atualizadas a partir do backup original limpo.
+- Reconstrução isolada do ASAR ZCode 3.15.3 validada, incluindo os módulos JavaScript e os marcadores de seleção PT-BR e idioma dinâmico da bandeja.
+
 ### Seletor de idioma e detecção automática — ZCode 3.15.3 — 14/10/2026
 - Corrigidos os seletores de idioma das Configurações Gerais e da barra lateral para exibir “Português (Brasil)” na compilação 3.15.3.
 - Corrigidos os schemas centrais de preferências para aceitar e persistir `pt-BR`, preservando os catálogos originais de inglês e chinês.

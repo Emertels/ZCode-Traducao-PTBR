@@ -1,3 +1,4 @@
+  • Correção de 16/10/2026: seletor rápido do perfil aceita Português (Brasil); menu da bandeja consulta o idioma atual e renova seus rótulos a cada clique direito, respeitando PT-BR, inglês e chinês. Para aplicar, encerre o ZCode pela bandeja e execute Instalar-Traducao.bat.
   • Correção de 14/10/2026: contexto remoto de Recompensas normalizado para en-US no locale pt-BR; novos plugins do marketplace e rótulos/contadores da página de indicações traduzidos.
 ==============================================================================
             PACOTE PORTÁTIL DE TRADUÇÃO ZCODE - PT-BR 🇧🇷

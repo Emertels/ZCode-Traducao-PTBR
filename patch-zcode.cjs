@@ -98,6 +98,8 @@ function isAlreadyTranslatedAsar(filePath) {
         let preloadTranslated = false;
         let localeResolverUpdated = false;
         let hostLocaleUpdated = false;
+        let sidebarLocaleHandlerUpdated = false;
+        let trayLocaleResolverUpdated = false;
         if (mainEntry) {
             const mBuf = Buffer.alloc(mainEntry.size);
             fs.readSync(fd, mBuf, 0, mainEntry.size, bOff + parseInt(mainEntry.offset, 10));
@@ -105,6 +107,8 @@ function isAlreadyTranslatedAsar(filePath) {
             mainTranslated = mainCode.includes("Emerson Teles") ||
                 mainCode.includes('"pt-BR":{aboutTitle:"Sobre o ZCode"') ||
                 mainCode.includes('Aplicativo do ZCode para desktop');
+            trayLocaleResolverUpdated = mainCode.includes("_ptResolveTrayLocale=()=>") &&
+                mainCode.includes('Sr.on("right-click",i)');
         }
         if (prelEntry) {
             const pBuf = Buffer.alloc(prelEntry.size);
@@ -116,6 +120,15 @@ function isAlreadyTranslatedAsar(filePath) {
             fs.readSync(fd, iBuf, 0, intlEntry.size, bOff + parseInt(intlEntry.offset, 10));
             localeResolverUpdated = iBuf.toString("utf8").includes(
                 'return n??(r&&t?t:e??t??null)'
+            );
+        }
+        const stylesName = Object.keys(rendererAssets).find(name => name.startsWith("styles-") && name.endsWith(".js"));
+        const stylesEntry = stylesName ? rendererAssets[stylesName] : null;
+        if (stylesEntry) {
+            const sBuf = Buffer.alloc(stylesEntry.size);
+            fs.readSync(fd, sBuf, 0, stylesEntry.size, bOff + parseInt(stylesEntry.offset, 10));
+            sidebarLocaleHandlerUpdated = sBuf.toString("utf8").includes(
+                '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&re(e)'
             );
         }
         for (const hostEntry of Object.values(hostFiles)) {
@@ -131,7 +144,8 @@ function isAlreadyTranslatedAsar(filePath) {
             }
         }
         fs.closeSync(fd);
-        return mainTranslated && preloadTranslated && localeResolverUpdated && hostLocaleUpdated;
+        return mainTranslated && preloadTranslated && localeResolverUpdated && hostLocaleUpdated &&
+            sidebarLocaleHandlerUpdated && trayLocaleResolverUpdated;
     } catch (e) {
         return false;
     }
@@ -351,11 +365,23 @@ if (trayLabelMatch) {
         process.exit(1);
     }
     const nodeRequireName = createRequireImport[1];
-    const ptTrayLabelCode = `const _ptNodeRequire=${nodeRequireName}(import.meta.url),_ptFs=_ptNodeRequire("fs"),_ptPath=_ptNodeRequire("path"),_ptOs=_ptNodeRequire("os"),_ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","导出日志":"Exportar Logs","Export logs":"Exportar Logs","Export Logs":"Exportar Logs","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","tray.menu.openZCode":"Abrir ZCode","tray.menu.newTask":"Nova Tarefa","tray.menu.openWorkspace":"Abrir Espaço de Trabalho","tray.menu.checkForUpdates":"Verificar Atualizações","tray.menu.aboutZCode":"Sobre o ZCode","tray.menu.exportLogs":"Exportar Logs","tray.menu.quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale();try{const _ptHome=process.env.USERPROFILE||_ptOs.homedir(),_ptSettings=JSON.parse(_ptFs.readFileSync(_ptPath.join(_ptHome,".zcode","v2","setting.json"),"utf8").replace(/^\\uFEFF/,"")),_ptPreference=String(_ptSettings.localePreference||"").trim(),_ptResolved=String(_ptSettings.locale||"").trim(),_ptSelected=/^(?:system|default|auto)$/i.test(_ptPreference)?_ptResolved:_ptPreference;if(/^(?:pt|en|zh)(?:-|$)/i.test(_ptSelected))locale=/^pt/i.test(_ptSelected)?"pt-BR":/^en/i.test(_ptSelected)?"en-US":"zh-CN"}catch{}let ${labelName}=s(${labelArg}=>{const _ptValue=$t(locale,${labelArg});return locale==="pt-BR"?(_ptTrayMap[_ptValue]||_ptTrayMap[${labelArg}]||_ptValue):_ptValue},"getLabel")`;
+        const ptTrayLabelCode = `const _ptNodeRequire=${nodeRequireName}(import.meta.url),_ptFs=_ptNodeRequire("fs"),_ptPath=_ptNodeRequire("path"),_ptOs=_ptNodeRequire("os"),_ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","导出日志":"Exportar Logs","Export logs":"Exportar Logs","Export Logs":"Exportar Logs","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","tray.menu.openZCode":"Abrir ZCode","tray.menu.newTask":"Nova Tarefa","tray.menu.openWorkspace":"Abrir Espaço de Trabalho","tray.menu.checkForUpdates":"Verificar Atualizações","tray.menu.aboutZCode":"Sobre o ZCode","tray.menu.exportLogs":"Exportar Logs","tray.menu.quit":"Sair","ZCode":"ZCode"};const _ptResolveTrayLocale=()=>{let locale=e.getLocale();try{const _ptHome=process.env.USERPROFILE||_ptOs.homedir(),_ptSettings=JSON.parse(_ptFs.readFileSync(_ptPath.join(_ptHome,".zcode","v2","setting.json"),"utf8").replace(/^\\uFEFF/,"")),_ptPreference=String(_ptSettings.localePreference||"").trim(),_ptResolved=String(_ptSettings.locale||"").trim(),_ptSelected=/^(?:system|default|auto)$/i.test(_ptPreference)?_ptResolved:_ptPreference;if(/^(?:pt|en|zh)(?:-|$)/i.test(_ptSelected))locale=/^pt/i.test(_ptSelected)?"pt-BR":/^en/i.test(_ptSelected)?"en-US":"zh-CN"}catch{}return locale};let ${labelName}=s(${labelArg}=>{const locale=_ptResolveTrayLocale(),_ptValue=$t(locale,${labelArg});return locale==="pt-BR"?(_ptTrayMap[_ptValue]||_ptTrayMap[${labelArg}]||_ptValue):_ptValue},"getLabel")`;
     mainCode = mainCode.replace(trayLabelMatch[0], ptTrayLabelCode);
     console.log("    -> Menu de contexto da bandeja segue o idioma escolhido nas configurações (pt-BR/en-US/zh-CN).");
 } else if (mainCode.includes('trayOpenZCode')) {
     console.error("[x] Não foi possível reconhecer o resolvedor do menu da bandeja; instalação cancelada para evitar deixar os rótulos em chinês.");
+    process.exit(1);
+}
+
+// Recriar o menu a cada clique direito para que o Electron receba os rótulos
+// calculados com a preferência de idioma mais recente, e não o menu inicial.
+const trayMenuRegistration = 'return AP=i,Sr.on("click",n),Sr.on("double-click",n),i(),Sr';
+const localizedTrayMenuRegistration = 'return AP=i,Sr.on("right-click",i),Sr.on("click",n),Sr.on("double-click",n),i(),Sr';
+if (mainCode.includes(trayMenuRegistration)) {
+    mainCode = mainCode.replace(trayMenuRegistration, localizedTrayMenuRegistration);
+    console.log("    -> Menu da bandeja reconstruído ao clicar com o botão direito.");
+} else if (!mainCode.includes(localizedTrayMenuRegistration)) {
+    console.error("[x] Registro de eventos da bandeja não reconhecido; instalação cancelada.");
     process.exit(1);
 }
 
@@ -513,6 +539,15 @@ stylesCode = stylesCode.replace(
     '(e===`zh-CN`||e===`en-US`)&&G(e)',
     '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&G(e)'
 );
+const sidebarLocaleHandler = '(e===`zh-CN`||e===`en-US`)&&re(e)';
+const localizedSidebarLocaleHandler = '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&re(e)';
+if (stylesCode.includes(sidebarLocaleHandler)) {
+    stylesCode = stylesCode.replace(sidebarLocaleHandler, localizedSidebarLocaleHandler);
+    console.log("    -> Seletor de idioma do perfil agora envia Português (Brasil) ao serviço de idioma.");
+} else if (!stylesCode.includes(localizedSidebarLocaleHandler)) {
+    console.error("[x] Manipulador de idioma do menu do perfil não reconhecido; instalação cancelada.");
+    process.exit(1);
+}
 stylesCode = stylesCode.replace(
     '(e===`zh-CN`||e===`en-US`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})',
     '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})'
