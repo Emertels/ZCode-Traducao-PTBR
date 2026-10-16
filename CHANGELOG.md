@@ -114,3 +114,30 @@
 - Scripts de instalação e restauração em um clique (`Instalar-Traducao.bat` e `Restaurar-Original.bat`).
 - Tradução de todos os módulos de ecossistema: Uso do Navegador, Uso do Computador, Emulador Android, Simulador iOS e Habilidades de Documentos.
 - Localização dos subagentes de IA: Uso Geral (General), Explorar (Explore) e Juiz (Judge).
+### Menu da bandeja do sistema — ZCode 3.15.3 — 14/10/2026
+- Completada a tradução do menu mostrado na captura: abrir o ZCode, nova tarefa, abrir espaço de trabalho, verificar atualizações, sobre o ZCode, exportar logs e sair. Adicionado o mapeamento chinês que faltava para “Exportar Logs”; os rótulos já mapeados foram conferidos no mesmo menu.
+
+### Menu da bandeja do sistema — correção de compatibilidade — ZCode 3.15.3 — 14/10/2026
+- Corrigida a tradução do menu de contexto da bandeja do Windows: a versão 3.15.3 usa `$t(e.getLocale(),a)` no módulo principal, enquanto o patcher antigo procurava outro formato; agora traduz os rótulos chineses para PT-BR e mantém o inglês quando o locale é inglês.
+- Corrigida também a inserção do catálogo PT-BR no menu do sistema. O patcher localiza o catálogo e o resolvedor mesmo quando a compilação muda os nomes minificados; antes, a versão 3.15.3 usava `Ah`/`II`, mas o patch procurava `eh`/`ik` e deixava o menu em chinês sem acusar falha.
+- O instalador agora interrompe a aplicação se não reconhecer o resolvedor ou o catálogo do menu, evitando declarar sucesso sem aplicar a tradução. Inglês e chinês continuam usando seus catálogos próprios.
+
+## v1.3.0 — 16/10/2026
+
+### Seletor de idioma e serviço de configurações
+- Corrigida a validação do `settingService` no processo host. Antes, o renderizador permitia selecionar `pt-BR`, mas o host rejeitava o valor, devolvia as preferências padrão e regravava o idioma como chinês/sistema.
+- O patcher agora inclui `pt-BR` nos schemas de `locale` e `localePreference`, localiza o chunk de configurações pela estrutura real do ZCode e interrompe a instalação se não encontrar exatamente o alvo esperado.
+- A interface pode manter Português (Brasil) como idioma escolhido, e as configurações deixam de ser substituídas por `zh-CN`/`system` durante a leitura e gravação.
+
+### Menu da bandeja do sistema
+- O menu aberto pelo ícone ao lado do relógio agora consulta o idioma salvo nas configurações do ZCode. `pt-BR`, `en-US` e `zh-CN` exibem seus catálogos correspondentes, sem deixar os rótulos presos em português ao alternar para inglês ou chinês.
+- “Exportar Logs” também tem mapeamento em português no menu de contexto.
+
+### Compatibilidade e validação
+- Preservados os catálogos originais de inglês e chinês e o seletor de Português (Brasil) nas Configurações Gerais e na barra lateral.
+- Validada a geração do patch sobre uma cópia limpa do ZCode 3.15.3; os módulos gerados passaram pela verificação sintática do Node.js.
+
+### Seletor PT-BR e serviço de configurações — ZCode 3.15.3 — 16/10/2026
+- Corrigido o schema Zod no bundle do host que rejeitava `pt-BR` em `locale` e `localePreference`. O renderer mostrava a opção e gravava a seleção, mas o serviço host descartava esses campos e retornava ao idioma anterior/padrão.
+- O patcher localiza o chunk de configurações pelo conteúdo, inclui Português (Brasil) nas duas enums e falha de forma explícita se a estrutura mudar ou não for única.
+- O menu da bandeja do Windows agora consulta o idioma salvo no ZCode e usa os catálogos correspondentes para português, inglês ou chinês; o locale do Windows deixa de sobrepor a escolha do usuário.

@@ -6,12 +6,18 @@ O patcher acompanha as estruturas atuais do diálogo “Sobre”, da preferênci
 Corrigido o instalador `aplicar-traducao.ps1`, que estava sem BOM UTF-8 e exibia caracteres como `TRADUÃ‡ÃƒO`. Os lançadores BAT não alteram a página de código; os dois títulos incompletos nos logs Node também receberam os acentos corretos.
 
 
-![Versão](https://img.shields.io/badge/Versão-v1.2.0-teal?style=for-the-badge)
+![Versão](https://img.shields.io/badge/Versão-v1.3.0-teal?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/Idioma-Português%20(Brasil)-green?style=for-the-badge)
 
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
 
 <!-- zcode-status -->
+## Correção do seletor PT-BR — 16/10/2026
+
+- Corrigido o schema de idioma do serviço de configurações no processo host. Antes, a interface exibia e aceitava `pt-BR`, mas o host rejeitava o valor ao ler `setting.json` e o substituía por chinês/sistema. O patcher agora libera `pt-BR` tanto em `locale` quanto em `localePreference`.
+- O menu de contexto ao lado do relógio agora lê a preferência do ZCode; alternar entre português, inglês e chinês também troca os rótulos da bandeja.
+- Execute novamente `Instalar-Traducao.bat` com o ZCode fechado para aplicar a correção.
+
 ## Atualização de 14/10/2026 — Recompensas e marketplace
 
 - Corrigida a ponte de Recompensas para converter `pt-BR` em `en-US` somente no contexto enviado ao serviço remoto; o preload continua traduzindo a interface local.

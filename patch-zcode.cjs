@@ -313,14 +313,25 @@ if (mainCode.includes(aboutCopyrightNeedle)) {
     console.log("    -> Copyright do diálogo Sobre localizado em PT-BR e preservado em inglês.");
 }
 
-// Traduzir menu de contexto da bandeja do sistema (Windows Tray).
-// O processo principal do ZCode resolve o locale nativo apenas como en-US/zh-CN;
-// quando está em chinês, o mapa PT-BR deve converter os rótulos chineses também.
-const trayLabelNeedle = 'let t=s(i=>Mt(e.getLocale(),i),"getLabel")';
-if (mainCode.includes(trayLabelNeedle)) {
-    const ptTrayMapCode = `const _ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale(),normalizedLocale=String(locale).replace(/_/g,"-").toLowerCase(),isEnglishLocale=/^en(?:-|$)/.test(normalizedLocale),t=s(i=>{let val=Mt(locale,i);return isEnglishLocale?val:(_ptTrayMap[val]||val)},"getLabel")`;
-    mainCode = mainCode.replace(trayLabelNeedle, ptTrayMapCode);
-    console.log("    -> Menu da bandeja do sistema (System Tray) traduzido para PT-BR.");
+// Menu da bandeja do sistema: app.getLocale() reflete o locale do Electron/Windows,
+// não necessariamente o idioma escolhido nas configurações do ZCode. Ler a
+// preferência do perfil para manter menu, seletor e interface no mesmo idioma.
+const trayLabelMatch = mainCode.match(/let\s+(\w+)=s\((\w+)=>\$t\(e\.getLocale\(\),\2\),"getLabel"\)/);
+if (trayLabelMatch) {
+    const labelName = trayLabelMatch[1];
+    const labelArg = trayLabelMatch[2];
+    const createRequireImport = mainCode.match(/import\{createRequire as ([\w$]+)\}from"module"/);
+    if (!createRequireImport) {
+        console.error("[x] Não foi possível localizar createRequire no módulo principal para sincronizar o idioma da bandeja; instalação cancelada.");
+        process.exit(1);
+    }
+    const nodeRequireName = createRequireImport[1];
+    const ptTrayLabelCode = `const _ptNodeRequire=${nodeRequireName}(import.meta.url),_ptFs=_ptNodeRequire("fs"),_ptPath=_ptNodeRequire("path"),_ptOs=_ptNodeRequire("os"),_ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","导出日志":"Exportar Logs","Export logs":"Exportar Logs","Export Logs":"Exportar Logs","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","tray.menu.openZCode":"Abrir ZCode","tray.menu.newTask":"Nova Tarefa","tray.menu.openWorkspace":"Abrir Espaço de Trabalho","tray.menu.checkForUpdates":"Verificar Atualizações","tray.menu.aboutZCode":"Sobre o ZCode","tray.menu.exportLogs":"Exportar Logs","tray.menu.quit":"Sair","ZCode":"ZCode"};let locale=e.getLocale();try{const _ptHome=process.env.USERPROFILE||_ptOs.homedir(),_ptSettings=JSON.parse(_ptFs.readFileSync(_ptPath.join(_ptHome,".zcode","v2","setting.json"),"utf8").replace(/^\\uFEFF/,"")),_ptPreference=String(_ptSettings.localePreference||"").trim(),_ptResolved=String(_ptSettings.locale||"").trim(),_ptSelected=/^(?:system|default|auto)$/i.test(_ptPreference)?_ptResolved:_ptPreference;if(/^(?:pt|en|zh)(?:-|$)/i.test(_ptSelected))locale=/^pt/i.test(_ptSelected)?"pt-BR":/^en/i.test(_ptSelected)?"en-US":"zh-CN"}catch{}let ${labelName}=s(${labelArg}=>{const _ptValue=$t(locale,${labelArg});return locale==="pt-BR"?(_ptTrayMap[_ptValue]||_ptTrayMap[${labelArg}]||_ptValue):_ptValue},"getLabel")`;
+    mainCode = mainCode.replace(trayLabelMatch[0], ptTrayLabelCode);
+    console.log("    -> Menu de contexto da bandeja segue o idioma escolhido nas configurações (pt-BR/en-US/zh-CN).");
+} else if (mainCode.includes('trayOpenZCode')) {
+    console.error("[x] Não foi possível reconhecer o resolvedor do menu da bandeja; instalação cancelada para evitar deixar os rótulos em chinês.");
+    process.exit(1);
 }
 
 // Traduzir indicador de Computer Use apenas no locale pt-BR.
@@ -390,19 +401,30 @@ if (desktopMenuChunkCode) {
         "tray.menu.quit": "Sair"
     };
 
-    const startIdx = desktopMenuChunkCode.indexOf('eh={"zh-CN":');
-    const endIdx = desktopMenuChunkCode.indexOf('}};function ik', startIdx);
-    if (startIdx !== -1 && endIdx !== -1) {
-        const ptStr = JSON.stringify(ptDesktopMenu);
-        const newEh = `${desktopMenuChunkCode.slice(startIdx, endIdx + 1)},"pt-BR":${ptStr}}`;
-        desktopMenuChunkCode = desktopMenuChunkCode.substring(0, startIdx) + newEh + desktopMenuChunkCode.substring(endIdx + 2);
-        console.log("    -> Menus do sistema traduzidos somente em pt-BR; en-US e zh-CN preservados.");
+    // Os nomes minificados do catálogo e do resolvedor mudam entre builds.
+    // Localize o objeto pelo resolvedor que o consulta em vez de fixar eh/ik.
+    const menuLocaleResolver = desktopMenuChunkCode.match(/function\s+([\w$]+)\(t,n\)\{return\(([\w$]+)\[t\]\?\?\2\[As\]\)\[n\]\}/);
+    if (!menuLocaleResolver) {
+        console.error("[x] Não foi possível reconhecer o resolvedor do catálogo dos menus; instalação cancelada para evitar uma tradução incompleta.");
+        process.exit(1);
     }
-
-    desktopMenuChunkCode = desktopMenuChunkCode.replace(
-        'function ik(t,n){return(eh[t]??eh[fs])[n]}',
-        'function ik(t,n){return(eh[t]??eh[fs]??eh["en-US"])[n]}'
-    );
+    const resolverName = menuLocaleResolver[1];
+    const menuMapName = menuLocaleResolver[2];
+    const resolverStart = menuLocaleResolver.index;
+    const mapDeclaration = `${menuMapName}={"zh-CN":`;
+    const mapStart = desktopMenuChunkCode.lastIndexOf(mapDeclaration, resolverStart);
+    const mapEnd = resolverStart - 2; // fecha o objeto de locales imediatamente antes de ;function do resolvedor
+    if (mapStart === -1 || desktopMenuChunkCode[mapEnd] !== "}") {
+        console.error("[x] Não foi possível localizar com segurança o catálogo zh-CN do menu; instalação cancelada.");
+        process.exit(1);
+    }
+    if (!desktopMenuChunkCode.slice(mapStart, mapEnd).includes('"pt-BR":')) {
+        desktopMenuChunkCode = desktopMenuChunkCode.slice(0, mapEnd) + `,"pt-BR":${JSON.stringify(ptDesktopMenu)}` + desktopMenuChunkCode.slice(mapEnd);
+    }
+    const oldResolver = menuLocaleResolver[0];
+    const newResolver = `function ${resolverName}(t,n){return(${menuMapName}[t]??${menuMapName}[As]??${menuMapName}["en-US"])[n]}`;
+    desktopMenuChunkCode = desktopMenuChunkCode.replace(oldResolver, newResolver);
+    console.log(`    -> Catálogo PT-BR do menu do sistema inserido no mapa ${menuMapName}; inglês e chinês preservados.`);
 
     // Permitir pt-BR no locale salvo e na preferência "System default".
     // Não alterar os schemas de campanhas, que aceitam somente en-US/zh-CN.
@@ -581,6 +603,32 @@ if (marketingEnumMatch && marketingHeaderMatch && marketingEnumMatch[1] === mark
 } else {
     console.warn("[!] API de campanhas mudou; o fallback de locale do bônus não foi aplicado.");
 }
+
+// B.1.1 O settingService também valida locale no host. Adicionar pt-BR só aos
+// seletores e ao IntlProvider não basta: o host descartava a preferência no
+// setting.get e a regravava como zh-CN/system, impedindo a mudança de idioma.
+const cHostFiles = cleanHeader.files.out?.files?.host?.files || {};
+const hostLocaleSchemaCandidates = Object.keys(cHostFiles).filter(fileName => {
+    if (!fileName.endsWith(".js")) return false;
+    const code = getCleanFile(`out/host/${fileName}`);
+    return code && code.includes('e.enum(["system","zh-CN","en-US"])') &&
+        code.includes('e.enum(["zh-CN","en-US"])') && code.includes("localePreference");
+});
+if (hostLocaleSchemaCandidates.length !== 1) {
+    console.error(`[x] Esperava encontrar um schema de idioma do settingService; encontrados: ${hostLocaleSchemaCandidates.length}. Instalação cancelada.`);
+    process.exit(1);
+}
+const hostLocaleSchemaChunkName = hostLocaleSchemaCandidates[0];
+let hostLocaleSchemaCode = getCleanFile(`out/host/${hostLocaleSchemaChunkName}`);
+const hostLocaleSchemaPattern = /([\w$]+)=e\.enum\(\["zh-CN","en-US"\]\),([\w$]+)=e\.enum\(\["system","zh-CN","en-US"\]\)/g;
+const hostLocaleSchemas = [...hostLocaleSchemaCode.matchAll(hostLocaleSchemaPattern)];
+if (hostLocaleSchemas.length !== 1) {
+    console.error(`[x] O schema de locale do settingService mudou; encontrados ${hostLocaleSchemas.length} pares para patch.`);
+    process.exit(1);
+}
+hostLocaleSchemaCode = hostLocaleSchemaCode.replace(hostLocaleSchemaPattern,
+    '$1=e.enum(["zh-CN","en-US","pt-BR"]),$2=e.enum(["system","zh-CN","en-US","pt-BR"])');
+console.log(`    -> settingService agora aceita e persiste pt-BR em out/host/${hostLocaleSchemaChunkName}.`);
 
 // B.2 Manter 'New Group' no host; o DOM o traduz para 'Novo grupo' somente em pt-BR.
 const cHostNode = cleanHeader.files.out.files.host.files;
@@ -1451,6 +1499,7 @@ const tempCheckMain = path.join(resourcesDir, "temp_check_main.mjs");
 const tempCheckStyles = path.join(resourcesDir, "temp_check_styles.mjs");
 const tempCheckPreload = path.join(resourcesDir, "temp_check_preload.cjs");
 const tempCheckHost = path.join(resourcesDir, "temp_check_host.mjs");
+const tempCheckHostLocaleSchema = path.join(resourcesDir, "temp_check_host_locale_schema.mjs");
 const tempCheckDesktopMenu = path.join(resourcesDir, "temp_check_desktop_menu.mjs");
 const tempCheckRewardsBridge = path.join(resourcesDir, "temp_check_rewards_bridge.mjs");
 
@@ -1472,6 +1521,10 @@ try {
         execSync(`node --check "${tempCheckHost}"`, { stdio: "inherit" });
         fs.unlinkSync(tempCheckHost);
     }
+
+    fs.writeFileSync(tempCheckHostLocaleSchema, hostLocaleSchemaCode, "utf8");
+    execSync(`node --check "${tempCheckHostLocaleSchema}"`, { stdio: "inherit" });
+    fs.unlinkSync(tempCheckHostLocaleSchema);
 
     if (rewardsBridgeCode) {
         fs.writeFileSync(tempCheckRewardsBridge, rewardsBridgeCode, "utf8");
@@ -1497,6 +1550,7 @@ try {
     try { fs.unlinkSync(tempCheckMain); } catch {}
     try { fs.unlinkSync(tempCheckStyles); } catch {}
     try { fs.unlinkSync(tempCheckHost); } catch {}
+    try { fs.unlinkSync(tempCheckHostLocaleSchema); } catch {}
     try { fs.unlinkSync(tempCheckDesktopMenu); } catch {}
     try { fs.unlinkSync(tempCheckRewardsBridge); } catch {}
     try { fs.unlinkSync(tempCheckPreload); } catch {}
@@ -1507,6 +1561,7 @@ try {
 const patchedMainBuf = Buffer.from(mainCode, "utf8");
 const patchedStylesBuf = Buffer.from(stylesCode, "utf8");
 const patchedHostBuf = hostCode ? Buffer.from(hostCode, "utf8") : null;
+const patchedHostLocaleSchemaBuf = Buffer.from(hostLocaleSchemaCode, "utf8");
 const patchedDesktopMenuBuf = desktopMenuChunkCode ? Buffer.from(desktopMenuChunkCode, "utf8") : null;
 const patchedChunkHostBuf = chunkHostCode ? Buffer.from(chunkHostCode, "utf8") : null;
 const patchedIntlBuf = Buffer.from(intlCode, "utf8");
@@ -1618,6 +1673,13 @@ for (const item of allItems) {
         const integrity = computeIntegrity(patchedHostBuf);
         setDeep(newHeader, parts, { size, offset, integrity });
         filesToWrite.push({ type: "buffer", buffer: patchedHostBuf, size, path: p });
+        currentOffset += size;
+    } else if (p === `out/host/${hostLocaleSchemaChunkName}` && patchedHostLocaleSchemaBuf) {
+        const size = patchedHostLocaleSchemaBuf.length;
+        const offset = currentOffset.toString();
+        const integrity = computeIntegrity(patchedHostLocaleSchemaBuf);
+        setDeep(newHeader, parts, { size, offset, integrity });
+        filesToWrite.push({ type: "buffer", buffer: patchedHostLocaleSchemaBuf, size, path: p });
         currentOffset += size;
     } else if (hostGroupChunkName && p === `out/host/${hostGroupChunkName}` && patchedChunkHostBuf) {
         const size = patchedChunkHostBuf.length;
