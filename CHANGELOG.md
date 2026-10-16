@@ -1,6 +1,6 @@
 ### Preferência do seletor PT-BR — ZCode 3.15.3 — 16/10/2026
 - Corrigida a prioridade de idioma na inicialização: a preferência atual registrada pelo serviço de configurações do ZCode prevalece sobre um valor antigo de `localStorage`, que podia manter a interface em inglês mesmo com `setting.json` em `pt-BR`.
-- O patcher valida esse resolvedor do `IntlProvider` e aborta se a estrutura esperada não existir.
+- O patcher valida esse resolvedor do `IntlProvider` e aborta se a estrutura esperada não existir. O instalador também distingue builds anteriores sem essa correção e os reconstrói a partir do backup original, em vez de encerrar como se já estivesse atualizado.
 - Refeito o pacote portátil v1.3.0 para substituir o ZIP da release existente.
 
 ### Textos da página de Recompensas — ZCode 3.15.3 — 14/10/2026

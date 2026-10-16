@@ -152,7 +152,7 @@ tradução de Emerson Teles; não relicencia o ZCode nem terceiros.
 Antes do commit, confira os arquivos preparados e não force itens ignorados.
 ===== ZCODE-STATUS =====
 Estado da atualização — 14/10/2026 · ZCode 3.15.3
-• Correção de 16/10/2026: a preferência atual do ZCode prevalece sobre valores antigos de localStorage, evitando que o seletor volte para inglês/chinês enquanto setting.json está em pt-BR. O patcher valida o resolvedor e interrompe a instalação se a estrutura mudar.
+• Correção de 16/10/2026: a preferência atual do ZCode prevalece sobre valores antigos de localStorage. Builds anteriores são reconhecidos como parciais e atualizados a partir do backup limpo; o patcher interrompe se a estrutura esperada mudar.
 
 
 • Foram adicionadas 225 traduções que faltavam no catálogo IntlProvider. A auditoria atual mapeia 6.312 mensagens em inglês e não encontrou lacunas por ID/texto nesse catálogo; isso não significa que cada string dinâmica fora dele tenha sido auditada visualmente.
@@ -315,7 +315,7 @@ tradução de Emerson Teles; não relicencia o ZCode nem terceiros.
 Antes do commit, confira os arquivos preparados e não force itens ignorados.
 ===== ZCODE-STATUS =====
 Estado da atualização — 14/10/2026 · ZCode 3.15.3
-• Correção de 16/10/2026: a preferência atual do ZCode prevalece sobre valores antigos de localStorage, evitando que o seletor volte para inglês/chinês enquanto setting.json está em pt-BR. O patcher valida o resolvedor e interrompe a instalação se a estrutura mudar.
+• Correção de 16/10/2026: a preferência atual do ZCode prevalece sobre valores antigos de localStorage. Builds anteriores são reconhecidos como parciais e atualizados a partir do backup limpo; o patcher interrompe se a estrutura esperada mudar.
 
 
 • Foram adicionadas 225 traduções que faltavam no catálogo IntlProvider. A auditoria atual mapeia 6.312 mensagens em inglês e não encontrou lacunas por ID/texto nesse catálogo; isso não significa que cada string dinâmica fora dele tenha sido auditada visualmente.

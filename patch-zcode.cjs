@@ -90,8 +90,14 @@ function isAlreadyTranslatedAsar(filePath) {
         // A detecção usa marcas próprias estáveis do módulo principal e do preload.
         const mainEntry = h.files && h.files.out && h.files.out.files && h.files.out.files.main && h.files.out.files.main.files && h.files.out.files.main.files["index.js"];
         const prelEntry = h.files && h.files.out && h.files.out.files && h.files.out.files.preload && h.files.out.files.preload.files && h.files.out.files.preload.files["index.cjs"];
+        const rendererAssets = h.files?.out?.files?.renderer?.files?.assets?.files || {};
+        const intlName = Object.keys(rendererAssets).find(name => name.startsWith("IntlProvider") && name.endsWith(".js"));
+        const intlEntry = intlName ? rendererAssets[intlName] : null;
+        const hostFiles = h.files?.out?.files?.host?.files || {};
         let mainTranslated = false;
         let preloadTranslated = false;
+        let localeResolverUpdated = false;
+        let hostLocaleUpdated = false;
         if (mainEntry) {
             const mBuf = Buffer.alloc(mainEntry.size);
             fs.readSync(fd, mBuf, 0, mainEntry.size, bOff + parseInt(mainEntry.offset, 10));
@@ -105,8 +111,27 @@ function isAlreadyTranslatedAsar(filePath) {
             fs.readSync(fd, pBuf, 0, prelEntry.size, bOff + parseInt(prelEntry.offset, 10));
             preloadTranslated = pBuf.toString("utf8").includes("_ptDomMap");
         }
+        if (intlEntry) {
+            const iBuf = Buffer.alloc(intlEntry.size);
+            fs.readSync(fd, iBuf, 0, intlEntry.size, bOff + parseInt(intlEntry.offset, 10));
+            localeResolverUpdated = iBuf.toString("utf8").includes(
+                'return n??(r&&t?t:e??t??null)'
+            );
+        }
+        for (const hostEntry of Object.values(hostFiles)) {
+            if (!hostEntry || typeof hostEntry.size !== "number" || hostEntry.files) continue;
+            const hBuf = Buffer.alloc(hostEntry.size);
+            fs.readSync(fd, hBuf, 0, hostEntry.size, bOff + parseInt(hostEntry.offset, 10));
+            const hostCode = hBuf.toString("utf8");
+            if (hostCode.includes('e.enum(["zh-CN","en-US","pt-BR"])') &&
+                hostCode.includes('e.enum(["system","zh-CN","en-US","pt-BR"])') &&
+                hostCode.includes("localePreference")) {
+                hostLocaleUpdated = true;
+                break;
+            }
+        }
         fs.closeSync(fd);
-        return mainTranslated && preloadTranslated;
+        return mainTranslated && preloadTranslated && localeResolverUpdated && hostLocaleUpdated;
     } catch (e) {
         return false;
     }
