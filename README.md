@@ -1,3 +1,13 @@
+## Versão atual: 1.4.0 — ZCode 3.16.3 — 24/10/2026
+
+629 entradas novas, total de 8.521; catálogo atual com 6.942 mensagens em inglês auditadas; seletores, menus, campanhas e recompensas adaptados à 3.16.3; Node portátil incluído; backups limpos verificados antes de qualquer patch.
+
+Baixe o ZIP portátil na página de Releases, extraia a pasta inteira e execute **Instalar-Traducao.bat**. Para voltar ao original da mesma versão, use **Restaurar-Original.bat**. O ZIP inclui runtime e licenças, com documentação e changelog disponíveis apenas no repositório e na descrição da release.
+
+Instalação, restauração e reinstalação foram conferidas na versão indicada, preservando os backups originais. Histórico detalhado: [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 # 🤖 ZCode — Tradução para Português do Brasil (PT-BR) 🇧🇷
 ### Compatibilidade com ZCode 3.15.3 — 16/10/2026
 Corrigido o seletor rápido de idioma do perfil, que mostrava Português (Brasil), mas não enviava `pt-BR` ao serviço de configurações. O menu de contexto da bandeja agora consulta a preferência atual e é reconstruído a cada clique direito, acompanhando Português (Brasil), inglês e chinês sem manter rótulos antigos.

@@ -1,9 +1,18 @@
-﻿# Instalador de tradução PT-BR para ZCode — Emerson Teles
+﻿$null = & chcp.com 65001
+# Instalador de tradução PT-BR para ZCode — Emerson Teles
 # ======================================================================
 $utf8Console = New-Object System.Text.UTF8Encoding($false)
 [Console]::InputEncoding = $utf8Console
 [Console]::OutputEncoding = $utf8Console
 $OutputEncoding = $utf8Console
+
+function Resolve-TranslationNode {
+    $portableNode = Join-Path $PSScriptRoot 'runtime\node.exe'
+    if (Test-Path -LiteralPath $portableNode -PathType Leaf) {
+        return [pscustomobject]@{ Source = $portableNode }
+    }
+    return Get-Command node.exe -ErrorAction SilentlyContinue
+}
 
 function Read-OpenChoice([string]$Prompt) {
     Write-Host $Prompt -NoNewline -ForegroundColor White
@@ -114,8 +123,8 @@ Write-Host '[3/6] Verificando o backup original da versão...' -ForegroundColor 
 $backupDir = Join-Path $zcodeDir "_backups"
 $versionBackup = Join-Path $backupDir $version
 $backupAsar = Join-Path $versionBackup "app.asar"
-$node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) { Write-Host "[x] Node.js não foi encontrado. Instale o Node.js e execute novamente." -ForegroundColor Red; Pause; exit 1 }
+$node = Resolve-TranslationNode
+if (-not $node) { Write-Host "[x] Node.js não foi encontrado. Extraia o ZIP portátil completo ou instale o Node.js e execute novamente." -ForegroundColor Red; Pause; exit 1 }
 $verifier = Join-Path $scriptDir "tools\verify-clean-asar.cjs"
 $settingsPath = Join-Path $env:USERPROFILE ".zcode\v2\setting.json"
 & $node.Source $patcher $zcodeDir --detect-state

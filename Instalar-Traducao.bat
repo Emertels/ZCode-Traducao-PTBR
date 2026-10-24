@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title Instalador PT-BR - ZCode - Emerson Teles
 cls
 echo ================================================================

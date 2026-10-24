@@ -24,3 +24,5 @@ __pycache__/
 
 # Internal team logs
 TEAMLOG.md
+# Portable Node.js runtime is distributed in release ZIPs only
+/runtime/

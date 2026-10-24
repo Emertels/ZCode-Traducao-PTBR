@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
-const { execSync, execFileSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 console.log("====================================================================");
 console.log("      PATCHER DINÂMICO AUTOMATIZADO ZCODE PT-BR - EMERSON TELES     ");
@@ -30,6 +30,17 @@ if (!fs.existsSync(srcAsar)) {
 
 const dict = JSON.parse(fs.readFileSync(dictPath, "utf8"));
 console.log("[*] Dicionário PT-BR carregado com", Object.keys(dict).length, "termos traduzidos.");
+
+const campaignTextKeys = ["The action failed. Please try again later.", "Got it", "Campaign rules ready", "ZCode 1024 Programmer's Day", "500M Tokens", "GLM-5.3-Flash + GLM-5.3 · 500M Tokens", "You now have access to ZCode 1024 Dev Day", "GLM-5.3-Flash is ready to use.", "GLM-5.3 is ready to use.", "Share", "Valid until"];
+const campaignTextTranslations = Object.fromEntries(campaignTextKeys.map(key => [key, dict[key]]).filter(([, value]) => value));
+const translationBuildMarker = "/* ptbr-zcode-build:" + crypto.createHash("sha256").update(fs.readFileSync(__filename)).update(JSON.stringify(dict)).digest("hex") + " */";
+function formatCampaignDeadline(value) {
+    const match = value.match(/^Valid until\s+([A-Z][a-z]+)\s+(\d{1,2}),?\s+(\d{4})\s+(\d{1,2}:\d{2})(.*)$/i);
+    if (!match) return value;
+    const months = { jan: "janeiro", feb: "fevereiro", mar: "março", apr: "abril", may: "maio", jun: "junho", jul: "julho", aug: "agosto", sep: "setembro", oct: "outubro", nov: "novembro", dec: "dezembro" };
+    const month = months[match[1].slice(0, 3).toLowerCase()];
+    return month ? "Válido até " + match[2] + " de " + month + " de " + match[3] + ", " + match[4] + match[5] : value;
+}
 
 function computeIntegrity(buffer) {
     const blockSize = 4 * 1024 * 1024;
@@ -108,12 +119,13 @@ function isAlreadyTranslatedAsar(filePath) {
                 mainCode.includes('"pt-BR":{aboutTitle:"Sobre o ZCode"') ||
                 mainCode.includes('Aplicativo do ZCode para desktop');
             trayLocaleResolverUpdated = mainCode.includes("_ptResolveTrayLocale=()=>") &&
-                mainCode.includes('Sr.on("right-click",i)');
+                mainCode.includes("ptbr-tray-menu-refresh");
         }
         if (prelEntry) {
             const pBuf = Buffer.alloc(prelEntry.size);
             fs.readSync(fd, pBuf, 0, prelEntry.size, bOff + parseInt(prelEntry.offset, 10));
-            preloadTranslated = pBuf.toString("utf8").includes("_ptDomMap");
+            const preloadSource = pBuf.toString("utf8");
+            preloadTranslated = preloadSource.includes("_ptDomMap") && preloadSource.includes(translationBuildMarker);
         }
         if (intlEntry) {
             const iBuf = Buffer.alloc(intlEntry.size);
@@ -128,7 +140,7 @@ function isAlreadyTranslatedAsar(filePath) {
             const sBuf = Buffer.alloc(stylesEntry.size);
             fs.readSync(fd, sBuf, 0, stylesEntry.size, bOff + parseInt(stylesEntry.offset, 10));
             sidebarLocaleHandlerUpdated = sBuf.toString("utf8").includes(
-                '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&re(e)'
+                'ptbr-locale-handlers'
             );
         }
         for (const hostEntry of Object.values(hostFiles)) {
@@ -195,17 +207,30 @@ const buildKey = currentVersion.replace(/[^a-zA-Z0-9._-]/g, "_");
 const versionBackupDir = path.join(backupDir, buildKey);
 const versionBackupAsar = path.join(versionBackupDir, "app.asar");
 const versionBackupInfo = path.join(versionBackupDir, "backup-info.txt");
+function isCleanOriginalAsar(filePath) {
+    try {
+        execFileSync(process.execPath, [path.join(scriptDir, "tools", "verify-clean-asar.cjs"), "zcode", filePath, currentVersion], { stdio: "ignore", windowsHide: true });
+        return true;
+    } catch { return false; }
+}
+const sourceIsClean = isCleanOriginalAsar(srcAsar);
+if (fs.existsSync(versionBackupAsar) && !isCleanOriginalAsar(versionBackupAsar)) {
+    console.error("[x] O backup desta versão não é um original limpo verificado; ele foi preservado e a instalação foi cancelada.");
+    process.exit(11);
+}
+if (!fs.existsSync(versionBackupAsar) && !sourceIsClean) {
+    console.error("[x] A instalação está modificada e não há backup original limpo desta versão; nenhum arquivo será alterado.");
+    process.exit(11);
+}
 if (!fs.existsSync(versionBackupDir)) fs.mkdirSync(versionBackupDir, { recursive: true });
 const infoText = `Backup original ZCode\nVersão: ${currentVersion}\nCriado: ${new Date().toLocaleString("pt-BR")}\nOrigem: ${versionBackupAsar}\n`;
-if (!fs.existsSync(versionBackupAsar) && !isSrcTranslated) {
+if (!fs.existsSync(versionBackupAsar) && sourceIsClean) {
     console.log(`[*] Preservando app.asar original da versão ${currentVersion} em ${versionBackupAsar}`);
     fs.copyFileSync(srcAsar, versionBackupAsar);
     fs.writeFileSync(versionBackupInfo, infoText, "utf8");
 }
-let cleanAsarPath = fs.existsSync(versionBackupAsar) && getAsarVersion(versionBackupAsar) === currentVersion && !isAlreadyTranslatedAsar(versionBackupAsar)
-    ? versionBackupAsar
-    : (!isSrcTranslated ? srcAsar : null);
-if (!cleanAsarPath || isAlreadyTranslatedAsar(cleanAsarPath) || getAsarVersion(cleanAsarPath) !== currentVersion) {
+const cleanAsarPath = versionBackupAsar;
+if (!isCleanOriginalAsar(cleanAsarPath) || getAsarVersion(cleanAsarPath) !== currentVersion) {
     console.error("[x] Backup original limpo desta versão ausente ou inválido; nenhum patch será aplicado.");
     console.error("    Repare/instale o ZCode oficial por cima e tente novamente. Mantenha os dados do usuário.");
     process.exit(11);
@@ -213,7 +238,7 @@ if (!cleanAsarPath || isAlreadyTranslatedAsar(cleanAsarPath) || getAsarVersion(c
 if (cleanAsarPath === versionBackupAsar) {
     console.log("[OK] Backup original em inglês desta versão encontrado e validado; ele será mantido sem substituição.");
 }
-if (isSrcTranslated) console.log("[*] Tradução existente detectada; a versão atualizada será reconstruída a partir do backup limpo.");
+if (!sourceIsClean) console.log("[*] Tradução existente detectada; a versão atualizada será reconstruída a partir do backup limpo.");
 console.log(`[*] Utilizando base limpa original de fábrica (em inglês) de: ${cleanAsarPath}`);
 let cleanFd = fs.openSync(cleanAsarPath, "r");
 const cSizeBuf = Buffer.alloc(16);
@@ -261,6 +286,11 @@ if (mainCode.includes(aboutCredit)) {
     if (mainCode.includes(aboutCopyrightMarkup) && !mainCode.includes(aboutCredit)) {
         mainCode = mainCode.replace(aboutCopyrightMarkup, `${aboutCopyrightMarkup}\n            <div style="margin-top:6px;font-size:12px;font-weight:400;color:#00adb5;letter-spacing:0.02em;text-align:left;">${aboutCredit}</div>`);
         console.log(`    -> Crédito '${aboutCredit}' adicionado ao diálogo Sobre atual.`);
+    } else if (mainCode.includes('            <div>${Hr(e.copyright)}</div>') && !mainCode.includes(aboutCredit)) {
+        const latestAboutCopyrightMarkup = '            <div>${Hr(e.copyright)}</div>';
+        mainCode = mainCode.replace(latestAboutCopyrightMarkup, latestAboutCopyrightMarkup + '\n            <div style="margin-top:6px;font-size:12px;font-weight:400;color:#00adb5;letter-spacing:0.02em;text-align:left;">' + aboutCredit + '</div>');
+        mainCode = mainCode.replace('VN=256,qN=312', 'VN=256,qN=345');
+        console.log(`    -> Crédito '${aboutCredit}' adicionado ao diálogo Sobre da versão atual.`);
     } else {
         console.log("    -> O modelo do crédito do diálogo Sobre não precisou de alteração nesta compilação.");
     }
@@ -297,7 +327,17 @@ if (!aboutLocalePatched) {
     }
 }
 if (!aboutLocalePatched) {
-    console.warn("[!] A estrutura do catálogo Sobre não foi reconhecida; confira as strings de About antes de instalar.");
+    const latestAboutMapStart = mainCode.indexOf('jC={"zh-CN":', mainCode.indexOf('ZCode Desktop App'));
+    const latestAboutMapEnd = latestAboutMapStart >= 0 ? mainCode.indexOf('};function rt(', latestAboutMapStart) : -1;
+    if (latestAboutMapStart >= 0 && latestAboutMapEnd >= 0) {
+        mainCode = mainCode.slice(0, latestAboutMapEnd) + ',"pt-BR":' + ptAboutObj + mainCode.slice(latestAboutMapEnd);
+        aboutLocalePatched = true;
+        console.log("    -> Catálogo PT-BR do diálogo Sobre adicionado à estrutura do ZCode 3.16.3.");
+    }
+}
+if (!aboutLocalePatched) {
+    console.error("[x] A estrutura do catálogo Sobre não foi reconhecida; instalação cancelada.");
+    process.exit(1);
 }
 
 // O About é aberto no processo principal, cujo locale nativo não inclui pt-BR.
@@ -341,6 +381,17 @@ if (mainCode.includes(aboutAppNameNeedle)) {
     mainCode = mainCode.replace(aboutAppNameNeedle, aboutAppNameLocalized);
     console.log("    -> Nome do aplicativo no diálogo Sobre traduzido condicionalmente para PT-BR.");
 }
+const latestAboutLocaleNeedle = 'function fp(e){return jC[e]??jC[At]}';
+const latestAboutLocaleLocalized = 'function fp(e){return jC[String(e).toLowerCase().startsWith("en")?"en-US":"pt-BR"]??jC[At]}';
+if (mainCode.includes(latestAboutLocaleNeedle)) {
+    mainCode = mainCode.replace(latestAboutLocaleNeedle, latestAboutLocaleLocalized);
+    console.log("    -> Diálogo Sobre do ZCode 3.16.3 mantém o inglês e usa PT-BR nos demais locales.");
+}
+const latestAboutNameNeedle = 'applicationName:GN,appVersion:o.appVersion';
+if (mainCode.includes(latestAboutNameNeedle)) {
+    mainCode = mainCode.replace(latestAboutNameNeedle, 'applicationName:String(t).toLowerCase().startsWith("en")?GN:"Aplicativo do ZCode para desktop",appVersion:o.appVersion');
+    console.log("    -> Nome do aplicativo localizado no diálogo Sobre do ZCode 3.16.3.");
+}
 
 // O diálogo Sobre recebe copyright nativo do Electron, que ignora o catálogo
 // localizado. Use o texto do catálogo em PT-BR e preserve o copyright original
@@ -355,17 +406,18 @@ if (mainCode.includes(aboutCopyrightNeedle)) {
 // Menu da bandeja do sistema: app.getLocale() reflete o locale do Electron/Windows,
 // não necessariamente o idioma escolhido nas configurações do ZCode. Ler a
 // preferência do perfil para manter menu, seletor e interface no mesmo idioma.
-const trayLabelMatch = mainCode.match(/let\s+(\w+)=s\((\w+)=>\$t\(e\.getLocale\(\),\2\),"getLabel"\)/);
+const trayLabelMatch = mainCode.match(/let\s+([\w$]+)=s\(([\w$]+)=>([\w$]+)\(e\.getLocale\(\),\2\),"getLabel"\)/);
 if (trayLabelMatch) {
     const labelName = trayLabelMatch[1];
     const labelArg = trayLabelMatch[2];
-    const createRequireImport = mainCode.match(/import\{createRequire as ([\w$]+)\}from"module"/);
+    const trayTranslator = trayLabelMatch[3];
+    const createRequireImport = mainCode.match(/import\{createRequire as ([\w$]+)\}from"(?:node:)?module"/);
     if (!createRequireImport) {
         console.error("[x] Não foi possível localizar createRequire no módulo principal para sincronizar o idioma da bandeja; instalação cancelada.");
         process.exit(1);
     }
     const nodeRequireName = createRequireImport[1];
-        const ptTrayLabelCode = `const _ptNodeRequire=${nodeRequireName}(import.meta.url),_ptFs=_ptNodeRequire("fs"),_ptPath=_ptNodeRequire("path"),_ptOs=_ptNodeRequire("os"),_ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","导出日志":"Exportar Logs","Export logs":"Exportar Logs","Export Logs":"Exportar Logs","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","tray.menu.openZCode":"Abrir ZCode","tray.menu.newTask":"Nova Tarefa","tray.menu.openWorkspace":"Abrir Espaço de Trabalho","tray.menu.checkForUpdates":"Verificar Atualizações","tray.menu.aboutZCode":"Sobre o ZCode","tray.menu.exportLogs":"Exportar Logs","tray.menu.quit":"Sair","ZCode":"ZCode"};const _ptResolveTrayLocale=()=>{let locale=e.getLocale();try{const _ptHome=process.env.USERPROFILE||_ptOs.homedir(),_ptSettings=JSON.parse(_ptFs.readFileSync(_ptPath.join(_ptHome,".zcode","v2","setting.json"),"utf8").replace(/^\\uFEFF/,"")),_ptPreference=String(_ptSettings.localePreference||"").trim(),_ptResolved=String(_ptSettings.locale||"").trim(),_ptSelected=/^(?:system|default|auto)$/i.test(_ptPreference)?_ptResolved:_ptPreference;if(/^(?:pt|en|zh)(?:-|$)/i.test(_ptSelected))locale=/^pt/i.test(_ptSelected)?"pt-BR":/^en/i.test(_ptSelected)?"en-US":"zh-CN"}catch{}return locale};let ${labelName}=s(${labelArg}=>{const locale=_ptResolveTrayLocale(),_ptValue=$t(locale,${labelArg});return locale==="pt-BR"?(_ptTrayMap[_ptValue]||_ptTrayMap[${labelArg}]||_ptValue):_ptValue},"getLabel")`;
+        const ptTrayLabelCode = `const _ptNodeRequire=${nodeRequireName}(import.meta.url),_ptFs=_ptNodeRequire("fs"),_ptPath=_ptNodeRequire("path"),_ptOs=_ptNodeRequire("os"),_ptTrayMap={"打开 ZCode":"Abrir ZCode","Open ZCode":"Abrir ZCode","新建任务":"Nova Tarefa","New task":"Nova Tarefa","打开工作区":"Abrir Espaço de Trabalho","Open workspace":"Abrir Espaço de Trabalho","检查更新":"Verificar Atualizações","Check for updates":"Verificar Atualizações","关于 ZCode":"Sobre o ZCode","About ZCode":"Sobre o ZCode","导出日志":"Exportar Logs","Export logs":"Exportar Logs","Export Logs":"Exportar Logs","清除所有数据":"Limpar Todos os Dados","Clear all data":"Limpar Todos os Dados","退出":"Sair","Quit":"Sair","tray.menu.openZCode":"Abrir ZCode","tray.menu.newTask":"Nova Tarefa","tray.menu.openWorkspace":"Abrir Espaço de Trabalho","tray.menu.checkForUpdates":"Verificar Atualizações","tray.menu.aboutZCode":"Sobre o ZCode","tray.menu.exportLogs":"Exportar Logs","tray.menu.quit":"Sair","ZCode":"ZCode"};const _ptResolveTrayLocale=()=>{let locale=e.getLocale();try{const _ptHome=process.env.USERPROFILE||_ptOs.homedir(),_ptSettings=JSON.parse(_ptFs.readFileSync(_ptPath.join(_ptHome,".zcode","v2","setting.json"),"utf8").replace(/^\\uFEFF/,"")),_ptPreference=String(_ptSettings.localePreference||"").trim(),_ptResolved=String(_ptSettings.locale||"").trim(),_ptSelected=/^(?:system|default|auto)$/i.test(_ptPreference)?_ptResolved:_ptPreference;if(/^(?:pt|en|zh)(?:-|$)/i.test(_ptSelected))locale=/^pt/i.test(_ptSelected)?"pt-BR":/^en/i.test(_ptSelected)?"en-US":"zh-CN"}catch{}return locale};let ${labelName}=s(${labelArg}=>{const locale=_ptResolveTrayLocale(),_ptValue=${trayTranslator}(locale,${labelArg});return locale==="pt-BR"?(_ptTrayMap[_ptValue]||_ptTrayMap[${labelArg}]||_ptValue):_ptValue},"getLabel")`;
     mainCode = mainCode.replace(trayLabelMatch[0], ptTrayLabelCode);
     console.log("    -> Menu de contexto da bandeja segue o idioma escolhido nas configurações (pt-BR/en-US/zh-CN).");
 } else if (mainCode.includes('trayOpenZCode')) {
@@ -375,12 +427,13 @@ if (trayLabelMatch) {
 
 // Recriar o menu a cada clique direito para que o Electron receba os rótulos
 // calculados com a preferência de idioma mais recente, e não o menu inicial.
-const trayMenuRegistration = 'return AP=i,Sr.on("click",n),Sr.on("double-click",n),i(),Sr';
-const localizedTrayMenuRegistration = 'return AP=i,Sr.on("right-click",i),Sr.on("click",n),Sr.on("double-click",n),i(),Sr';
-if (mainCode.includes(trayMenuRegistration)) {
-    mainCode = mainCode.replace(trayMenuRegistration, localizedTrayMenuRegistration);
+const trayMenuRegistration = mainCode.match(/return\s+([\w$]+)=([\w$]+),([\w$]+)\.on\("click",([\w$]+)\),\3\.on\("double-click",\4\),\2\(\),\3/);
+if (trayMenuRegistration) {
+    const [, savedMenu, rebuildMenu, trayObject, showWindow] = trayMenuRegistration;
+    const localizedTrayMenuRegistration = `return /* ptbr-tray-menu-refresh */ ${savedMenu}=${rebuildMenu},${trayObject}.on("right-click",${rebuildMenu}),${trayObject}.on("click",${showWindow}),${trayObject}.on("double-click",${showWindow}),${rebuildMenu}(),${trayObject}`;
+    mainCode = mainCode.replace(trayMenuRegistration[0], localizedTrayMenuRegistration);
     console.log("    -> Menu da bandeja reconstruído ao clicar com o botão direito.");
-} else if (!mainCode.includes(localizedTrayMenuRegistration)) {
+} else if (!mainCode.includes("ptbr-tray-menu-refresh")) {
     console.error("[x] Registro de eventos da bandeja não reconhecido; instalação cancelada.");
     process.exit(1);
 }
@@ -454,13 +507,16 @@ if (desktopMenuChunkCode) {
 
     // Os nomes minificados do catálogo e do resolvedor mudam entre builds.
     // Localize o objeto pelo resolvedor que o consulta em vez de fixar eh/ik.
-    const menuLocaleResolver = desktopMenuChunkCode.match(/function\s+([\w$]+)\(t,n\)\{return\(([\w$]+)\[t\]\?\?\2\[As\]\)\[n\]\}/);
+    const menuLocaleResolver = desktopMenuChunkCode.match(/function\s+([\w$]+)\(([\w$]+),([\w$]+)\)\{return\(([\w$]+)\[\2\]\?\?\4\[([\w$]+)\]\)\[\3\]\}/);
     if (!menuLocaleResolver) {
         console.error("[x] Não foi possível reconhecer o resolvedor do catálogo dos menus; instalação cancelada para evitar uma tradução incompleta.");
         process.exit(1);
     }
     const resolverName = menuLocaleResolver[1];
-    const menuMapName = menuLocaleResolver[2];
+    const localeArgument = menuLocaleResolver[2];
+    const keyArgument = menuLocaleResolver[3];
+    const menuMapName = menuLocaleResolver[4];
+    const fallbackLocale = menuLocaleResolver[5];
     const resolverStart = menuLocaleResolver.index;
     const mapDeclaration = `${menuMapName}={"zh-CN":`;
     const mapStart = desktopMenuChunkCode.lastIndexOf(mapDeclaration, resolverStart);
@@ -473,18 +529,20 @@ if (desktopMenuChunkCode) {
         desktopMenuChunkCode = desktopMenuChunkCode.slice(0, mapEnd) + `,"pt-BR":${JSON.stringify(ptDesktopMenu)}` + desktopMenuChunkCode.slice(mapEnd);
     }
     const oldResolver = menuLocaleResolver[0];
-    const newResolver = `function ${resolverName}(t,n){return(${menuMapName}[t]??${menuMapName}[As]??${menuMapName}["en-US"])[n]}`;
+    const newResolver = `function ${resolverName}(${localeArgument},${keyArgument}){return(${menuMapName}[${localeArgument}]??${menuMapName}[${fallbackLocale}]??${menuMapName}["en-US"])[${keyArgument}]}`;
     desktopMenuChunkCode = desktopMenuChunkCode.replace(oldResolver, newResolver);
     console.log(`    -> Catálogo PT-BR do menu do sistema inserido no mapa ${menuMapName}; inglês e chinês preservados.`);
 
     // Permitir pt-BR no locale salvo e na preferência "System default".
     // Não alterar os schemas de campanhas, que aceitam somente en-US/zh-CN.
-    const localeSchemaNeedle = 'Or=e.enum(["zh-CN","en-US"]),G_=e.enum(["system","zh-CN","en-US"])';
-    const localeSchemaLocalized = 'Or=e.enum(["zh-CN","en-US","pt-BR"]),G_=e.enum(["system","zh-CN","en-US","pt-BR"])';
-    if (desktopMenuChunkCode.includes(localeSchemaNeedle)) {
-        desktopMenuChunkCode = desktopMenuChunkCode.replace(localeSchemaNeedle, localeSchemaLocalized);
+    const localeSchemaMatch = desktopMenuChunkCode.match(/([\w$]+)=([\w$]+)\.enum\(\["zh-CN","en-US"\]\),([\w$]+)=\2\.enum\(\["system","zh-CN","en-US"\]\)/);
+    const localizedLocaleSchemaPattern = /[\w$]+=[\w$]+\.enum\(\["zh-CN","en-US","pt-BR"\]\),[\w$]+=[\w$]+\.enum\(\["system","zh-CN","en-US","pt-BR"\]\)/;
+    if (localeSchemaMatch) {
+        const [, localeName, schemaName, preferenceName] = localeSchemaMatch;
+        const localeSchemaLocalized = `${localeName}=${schemaName}.enum(["zh-CN","en-US","pt-BR"]),${preferenceName}=${schemaName}.enum(["system","zh-CN","en-US","pt-BR"])`;
+        desktopMenuChunkCode = desktopMenuChunkCode.replace(localeSchemaMatch[0], localeSchemaLocalized);
         console.log("    -> Schemas de locale e preferência aceitam Português (Brasil), preservando inglês e chinês.");
-    } else if (!desktopMenuChunkCode.includes(localeSchemaLocalized)) {
+    } else if (!localizedLocaleSchemaPattern.test(desktopMenuChunkCode)) {
         console.error("[x] Schema de idioma da compilação atual não reconhecido; instalação cancelada para evitar ocultar ou rejeitar pt-BR.");
         process.exit(1);
     }
@@ -501,61 +559,39 @@ if (!stylesFileName) {
 console.log(`[*] Aplicando patch no módulo de estilos e configurações: out/renderer/assets/${stylesFileName}`);
 let stylesCode = getCleanFile("out/renderer/assets/" + stylesFileName);
 
-// 1. Adicionar opção pt-BR no dropdown de Configurações Gerais
-const gOptTargets = [
-    { target: '(0,$.jsx)(Vf,{value:`en-US`,"data-testid":Oa(Pa,`en-US`),children:G.formatMessage({id:`settings.locale.en-US`})})', component: 'Vf', testId: 'Oa(Pa,`pt-BR`)', intl: 'G' },
-    { target: '(0,$.jsx)(kk,{value:`en-US`,"data-testid":Pa(ii,`en-US`),children:me.formatMessage({id:`settings.locale.en-US`})})', component: 'kk', testId: 'Pa(ii,`pt-BR`)', intl: 'me' }
-];
-const gOptMatch = gOptTargets.find(item => stylesCode.includes(item.target));
-if (gOptMatch && !stylesCode.includes('value:`pt-BR`,"data-testid":' + gOptMatch.testId)) {
-    const gOptReplacement = gOptMatch.target + ',(0,$.jsx)(' + gOptMatch.component + ',{value:`pt-BR`,"data-testid":' + gOptMatch.testId + ',children:' + gOptMatch.intl + '.formatMessage({id:`settings.locale.pt-BR`})})';
-    stylesCode = stylesCode.replace(gOptMatch.target, gOptReplacement);
+// 1 e 2. Localizar as opções de idioma pela estrutura JSX e pelo ID estável.
+// Os nomes minificados dos componentes variam a cada compilação.
+const generalLocaleOption = stylesCode.match(/\(0,([\w$]+)\.jsx\)\(([\w$]+),\{value:`en-US`,"data-testid":([\w$]+)\(([\w$]+),`en-US`\),children:([\w$]+)\.formatMessage\(\{id:`settings\.locale\.en-US`\}\)\}\)/);
+if (generalLocaleOption && !stylesCode.includes('id:`settings.locale.pt-BR`')) {
+    const localizedOption = generalLocaleOption[0].replace(/en-US/g, 'pt-BR');
+    stylesCode = stylesCode.replace(generalLocaleOption[0], generalLocaleOption[0] + ',' + localizedOption);
     console.log("    -> Adicionada opção 'Português (Brasil)' nas Configurações Gerais.");
-} else if (!gOptMatch && !stylesCode.includes('value:`pt-BR`,"data-testid":')) {
+} else if (!stylesCode.includes('id:`settings.locale.pt-BR`')) {
     console.error("[x] Seletor de idioma das Configurações Gerais não reconhecido; instalação cancelada.");
     process.exit(1);
 }
-
-// 2. Adicionar opção pt-BR no dropdown da Barra Lateral
-const sOptTargets = [
-    { target: '(0,$.jsx)(U_,{value:`zh-CN`,children:v.formatMessage({id:`sidebar.settings.locale.zh-CN`})})', component: 'U_' },
-    { target: '(0,$.jsx)(DA,{value:`zh-CN`,children:v.formatMessage({id:`sidebar.settings.locale.zh-CN`})})', component: 'DA' }
-];
-const sOptMatch = sOptTargets.find(item => stylesCode.includes(item.target));
-if (sOptMatch && !stylesCode.includes('(0,$.jsx)(' + sOptMatch.component + ',{value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})})')) {
-    stylesCode = stylesCode.replace(sOptMatch.target, sOptMatch.target + ',(0,$.jsx)(' + sOptMatch.component + ',{value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})})');
+const sidebarLocaleOption = stylesCode.match(/\(0,([\w$]+)\.jsx\)\(([\w$]+),\{value:`zh-CN`,children:([\w$]+)\.formatMessage\(\{id:`sidebar\.settings\.locale\.zh-CN`\}\)\}\)/);
+if (sidebarLocaleOption && !stylesCode.includes('id:`sidebar.settings.locale.pt-BR`')) {
+    const localizedOption = sidebarLocaleOption[0].replace(/zh-CN/g, 'pt-BR');
+    stylesCode = stylesCode.replace(sidebarLocaleOption[0], sidebarLocaleOption[0] + ',' + localizedOption);
     console.log("    -> Adicionada opção 'Português (Brasil)' na Barra Lateral.");
-} else if (!sOptMatch && !stylesCode.includes('value:`pt-BR`,children:v.formatMessage({id:`sidebar.settings.locale.pt-BR`})')) {
+} else if (!stylesCode.includes('id:`sidebar.settings.locale.pt-BR`')) {
     console.error("[x] Seletor rápido de idioma da barra lateral não reconhecido; instalação cancelada.");
     process.exit(1);
 }
 
-// 3. Permitir seleção de pt-BR nos manipuladores de evento
-stylesCode = stylesCode.replace(
-    '(e===`zh-CN`||e===`en-US`)&&qR({input:{featureId:`settings.locale`',
-    '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&qR({input:{featureId:`settings.locale`'
-);
-stylesCode = stylesCode.replace(
-    '(e===`zh-CN`||e===`en-US`)&&G(e)',
-    '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&G(e)'
-);
-const sidebarLocaleHandler = '(e===`zh-CN`||e===`en-US`)&&re(e)';
-const localizedSidebarLocaleHandler = '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&re(e)';
-if (stylesCode.includes(sidebarLocaleHandler)) {
-    stylesCode = stylesCode.replace(sidebarLocaleHandler, localizedSidebarLocaleHandler);
-    console.log("    -> Seletor de idioma do perfil agora envia Português (Brasil) ao serviço de idioma.");
-} else if (!stylesCode.includes(localizedSidebarLocaleHandler)) {
-    console.error("[x] Manipulador de idioma do menu do perfil não reconhecido; instalação cancelada.");
+// 3. Incluir pt-BR nas condições dos manipuladores de seleção de idioma.
+let localeHandlerCount = 0;
+stylesCode = stylesCode.replace(/\(([\w$]+)===`zh-CN`\|\|\1===`en-US`\)&&/g, (_, argument) => {
+    localeHandlerCount++;
+    return '(' + argument + '===`zh-CN`||' + argument + '===`en-US`||' + argument + '===`pt-BR`)&&';
+});
+if (!localeHandlerCount && !stylesCode.includes('ptbr-locale-handlers')) {
+    console.error("[x] Manipuladores de seleção de idioma não reconhecidos; instalação cancelada.");
     process.exit(1);
 }
-stylesCode = stylesCode.replace(
-    '(e===`zh-CN`||e===`en-US`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})',
-    '(e===`zh-CN`||e===`en-US`||e===`pt-BR`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`,trigger:`select`},operation:()=>h(e),completed:{resultSource:`local_commit`,valueAfter:e},failureStage:`local_commit`})'
-);
-if (stylesCode.includes('(e===`zh-CN`||e===`en-US`)&&OV({input:{featureId:`settings.locale`,action:`change_locale`')) {
-    console.error("[x] Handler do seletor de idioma não aceitou pt-BR; instalação cancelada.");
-    process.exit(1);
-}
+stylesCode += '\n/* ptbr-locale-handlers */\n';
+console.log(`    -> ${localeHandlerCount} manipulador(es) de idioma aceita(m) pt-BR.`);
 
 // 4. Permitir pt-BR nos getters de localStorage
 stylesCode = stylesCode.replace(
@@ -652,13 +688,14 @@ console.log("[*] Mantidos os textos originais do host; descrições e erros são
 let hostCode = getCleanFile("out/host/index.js");
 // A API de campanhas aceita somente en-US e zh-CN. Mantemos pt-BR na interface,
 // mas consultamos a API de bônus com en-US e aceitamos pt-BR no relatório de resgate.
-const marketingEnumMatch = hostCode && hostCode.match(/var (\w+)=([\w.]+)\.enum\(\["zh-CN","en-US"\]\)/);
-const marketingHeaderMatch = hostCode && hostCode.match(/"X-Client-Language":(\w+)\.parse\(o\)/);
+const marketingEnumMatch = hostCode && hostCode.match(/var ([\w$]+)=([\w$.]+)\.enum\(\["zh-CN","en-US"\]\)/);
+const marketingHeaderMatch = hostCode && hostCode.match(/"X-Client-Language":([\w$]+)\.parse\(([\w$]+)\)/);
 if (marketingEnumMatch && marketingHeaderMatch && marketingEnumMatch[1] === marketingHeaderMatch[1]) {
     const enumName = marketingEnumMatch[1];
     const enumNeedle = marketingEnumMatch[0];
+    const localeArgument = marketingHeaderMatch[2];
     hostCode = hostCode.replace(enumNeedle, enumNeedle.replace('["zh-CN","en-US"]', '["zh-CN","en-US","pt-BR"]'));
-    hostCode = hostCode.replace(marketingHeaderMatch[0], `"X-Client-Language":${enumName}.parse(o==="pt-BR"?"en-US":o)`);
+    hostCode = hostCode.replace(marketingHeaderMatch[0], `"X-Client-Language":${enumName}.parse(${localeArgument}==="pt-BR"?"en-US":${localeArgument})`);
     console.log("    -> Bônus: consultas e resgates pt-BR usam en-US somente no cabeçalho da API de campanhas.");
 } else {
     console.warn("[!] API de campanhas mudou; o fallback de locale do bônus não foi aplicado.");
@@ -803,23 +840,19 @@ const rewardsBridgeFileName = Object.keys(cAssetsNode).find(f => f.startsWith("s
 let rewardsBridgeCode = rewardsBridgeFileName ? getCleanFile("out/renderer/assets/" + rewardsBridgeFileName) : null;
 if (rewardsBridgeCode) {
     const rewardsSchemaStart = rewardsBridgeCode.indexOf('persist:zcode-rewards');
-    const rewardsLocaleSchema = rewardsSchemaStart >= 0 ? rewardsBridgeCode.slice(rewardsSchemaStart).match(/locale:g\(\[`zh-CN`,`en-US`\]\)/) : null;
+    const rewardsLocaleSchema = rewardsSchemaStart >= 0 ? rewardsBridgeCode.slice(rewardsSchemaStart).match(/locale:[\w$]+\(\[`zh-CN`,`en-US`\]\)/) : null;
     if (rewardsLocaleSchema) {
         const schemaIndex = rewardsSchemaStart + rewardsBridgeCode.slice(rewardsSchemaStart).indexOf(rewardsLocaleSchema[0]);
         rewardsBridgeCode = rewardsBridgeCode.slice(0, schemaIndex) + rewardsLocaleSchema[0].replace('[`zh-CN`,`en-US`]', '[`zh-CN`,`en-US`,`pt-BR`]') + rewardsBridgeCode.slice(schemaIndex + rewardsLocaleSchema[0].length);
     }
-    const rewardsSerializers = [
-        ['function Of(e,t,n){let r=wf.parse(e),i=', 'function Of(e,t,n){let r=wf.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i='],
-        ['function tP(e,t,n){let r=ZN.parse(e),i=', 'function tP(e,t,n){let r=ZN.parse(e);if(r.locale===`pt-BR`)r={...r,locale:`en-US`};let i=']
-    ];
-    let rewardsSerializerPatched = false;
-    for (const [original, localized] of rewardsSerializers) {
-        if (rewardsBridgeCode.includes(localized)) { rewardsSerializerPatched = true; break; }
-        if (rewardsBridgeCode.includes(original)) {
-            rewardsBridgeCode = rewardsBridgeCode.replace(original, localized);
-            rewardsSerializerPatched = true;
-            break;
-        }
+    const rewardsSerializer = rewardsBridgeCode.match(/function\s+([\w$]+)\(([\w$]+),([\w$]+),([\w$]+)\)\{let\s+([\w$]+)=([\w$]+)\.parse\(\2\),([\w$]+)=\5\.auth\.status===`ready`/);
+    let rewardsSerializerPatched = rewardsBridgeCode.includes("ptbr-rewards-locale");
+    if (rewardsSerializer) {
+        const [, name, context, credentials, url, parsed, schema, auth] = rewardsSerializer;
+        const original = `function ${name}(${context},${credentials},${url}){let ${parsed}=${schema}.parse(${context}),${auth}=`;
+        const localized = `function ${name}(${context},${credentials},${url}){let ${parsed}=${schema}.parse(${context});/* ptbr-rewards-locale */if(${parsed}.locale===\`pt-BR\`)${parsed}={...${parsed},locale:\`en-US\`};let ${auth}=`;
+        rewardsBridgeCode = rewardsBridgeCode.replace(original, localized);
+        rewardsSerializerPatched = true;
     }
     if (rewardsSerializerPatched) {
         console.log(`    -> Ponte de recompensas: contexto pt-BR normalizado para en-US no conteúdo remoto.`);
@@ -841,6 +874,7 @@ if (preloadCode) {
     }
     const domTranslator = `
     try {
+        ${formatCampaignDeadline.toString()}
         function _isPtBrActive() {
             try {
                 const preference = window.localStorage?.getItem("zcode-locale-preference");
@@ -1290,6 +1324,7 @@ if (preloadCode) {
             "More models are only available on paid plans.": "Mais modelos estão disponíveis apenas nos planos pagos.",
             "Warning: Updates Apply Automatically": "Aviso: as atualizações são aplicadas automaticamente"
         };
+        Object.assign(_ptDomMap, ${JSON.stringify(campaignTextTranslations)});
         const _filteredMap = {};
         for (const [k, v] of Object.entries(_ptDomMap)) {
             if (k && v && k !== v) {
@@ -1328,6 +1363,11 @@ if (preloadCode) {
                     if (!val) return;
                     const t = val.trim();
                     if (!t || t.length < 2) return;
+                    const campaignDeadline = formatCampaignDeadline(t);
+                    if (campaignDeadline !== t) {
+                        node.nodeValue = val.replace(t, campaignDeadline);
+                        return;
+                    }
                     if (_filteredMap[t]) {
                         const rep = _filteredMap[t];
                         if (rep !== t) {
@@ -1335,16 +1375,16 @@ if (preloadCode) {
                         }
                         return;
                     }
-                    if (/^\d+\s*min\s+ago$/i.test(t)) {
-                        node.nodeValue = val.replace(/min\s+ago/i, 'min atrás');
+                    if (/^\\d+\\s*min\\s+ago$/i.test(t)) {
+                        node.nodeValue = val.replace(/min\\s+ago/i, 'min atrás');
                         return;
                     }
-                    if (/^\d+\s*hours?\s+ago$/i.test(t)) {
-                        node.nodeValue = val.replace(/hours?\s+ago/i, 'horas atrás');
+                    if (/^\\d+\\s*hours?\\s+ago$/i.test(t)) {
+                        node.nodeValue = val.replace(/hours?\\s+ago/i, 'horas atrás');
                         return;
                     }
-                    if (/^\d+\s*days?\s+ago$/i.test(t)) {
-                        node.nodeValue = val.replace(/days?\s+ago/i, 'dias atrás');
+                    if (/^\\d+\\s*days?\\s+ago$/i.test(t)) {
+                        node.nodeValue = val.replace(/days?\\s+ago/i, 'dias atrás');
                         return;
                     }
                     if (t.length >= 8) {
@@ -1395,7 +1435,9 @@ if (preloadCode) {
                         const textNode = m.target;
                         const value = textNode.nodeValue || "";
                         const key = value.trim();
-                        if (_filteredMap[key]) textNode.nodeValue = value.replace(key, _filteredMap[key]);
+                        const deadline = formatCampaignDeadline(key);
+                        if (deadline !== key) textNode.nodeValue = value.replace(key, deadline);
+                        else if (_filteredMap[key]) textNode.nodeValue = value.replace(key, _filteredMap[key]);
                     } else if (m.type === "attributes" && _isPtBrActive()) {
                         // Quick-task labels/tooltips can be refreshed as attributes on reused nodes.
                         const element = m.target;
@@ -1425,7 +1467,7 @@ if (preloadCode) {
         }
     } catch (e) {}
     `;
-    preloadCode = preloadCode + "\n" + domTranslator;
+    preloadCode = preloadCode + "\n" + domTranslator + "\n" + translationBuildMarker;
     console.log("    -> Injetado observador DOM de tradução dinâmica no preload index.cjs.");
 }
 
@@ -1433,6 +1475,7 @@ if (preloadCode) {
 console.log("[*] Aplicando patch nos preloads das Webviews (Recompensas e Planos)");
 const webviewTranslator = `
 try {
+    ${formatCampaignDeadline.toString()}
     function _wvShouldTranslate() {
         try {
             const fs = require("fs");
@@ -1440,7 +1483,7 @@ try {
             const path = require("path");
             const home = process.env.USERPROFILE || os.homedir();
             const settingsPath = path.join(home, ".zcode", "v2", "setting.json");
-            const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+            const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8").replace(/^\\uFEFF/, ""));
             const preference = settings.localePreference || settings.locale;
             if (typeof preference === "string" && preference.trim()) {
                 const normalized = preference.trim().toLowerCase();
@@ -1509,12 +1552,15 @@ try {
         "Weekend Build": "Compilação de Fim de Semana",
         "Weekly Reset Card": "Cartão de Reinicialização Semanal"
     };
+    Object.assign(_wvMap, ${JSON.stringify(campaignTextTranslations)});
     function _translateWvText(value) {
         const trimmed = value.trim();
+        const deadline = formatCampaignDeadline(trimmed);
+        if (deadline !== trimmed) return value.replace(trimmed, deadline);
         if (_wvMap[trimmed]) return value.replace(trimmed, _wvMap[trimmed]);
-        let translated = trimmed.replace(/^(\d+)\s+new users referred$/i, "$1 novos usuários indicados");
-        translated = translated.replace(/^Refer (\d+) new users this week$/i, "Indique $1 novos usuários nesta semana");
-        translated = translated.replace(/^Refer (\d+) new users this campaign$/i, "Indique $1 novos usuários nesta campanha");
+        let translated = trimmed.replace(/^(\\d+)\\s+new users referred$/i, "$1 novos usuários indicados");
+        translated = translated.replace(/^Refer (\\d+) new users this week$/i, "Indique $1 novos usuários nesta semana");
+        translated = translated.replace(/^Refer (\\d+) new users this campaign$/i, "Indique $1 novos usuários nesta campanha");
         return translated === trimmed ? value : value.replace(trimmed, translated);
     }
     const _wvVisited = new WeakSet();
@@ -1575,44 +1621,52 @@ const tempCheckHostLocaleSchema = path.join(resourcesDir, "temp_check_host_local
 const tempCheckDesktopMenu = path.join(resourcesDir, "temp_check_desktop_menu.mjs");
 const tempCheckRewardsBridge = path.join(resourcesDir, "temp_check_rewards_bridge.mjs");
 
+function checkNodeSyntax(filePath) {
+    execFileSync(process.execPath, ["--check", filePath], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true
+    });
+}
+
 try {
     fs.writeFileSync(tempCheckIntl, intlCode, "utf8");
-    execSync(`node --check "${tempCheckIntl}"`, { stdio: "inherit" });
+    checkNodeSyntax(tempCheckIntl);
     fs.unlinkSync(tempCheckIntl);
 
     fs.writeFileSync(tempCheckMain, mainCode, "utf8");
-    execSync(`node --check "${tempCheckMain}"`, { stdio: "inherit" });
+    checkNodeSyntax(tempCheckMain);
     fs.unlinkSync(tempCheckMain);
 
     fs.writeFileSync(tempCheckStyles, stylesCode, "utf8");
-    execSync(`node --check "${tempCheckStyles}"`, { stdio: "inherit" });
+    checkNodeSyntax(tempCheckStyles);
     fs.unlinkSync(tempCheckStyles);
 
     if (hostCode) {
         fs.writeFileSync(tempCheckHost, hostCode, "utf8");
-        execSync(`node --check "${tempCheckHost}"`, { stdio: "inherit" });
+        checkNodeSyntax(tempCheckHost);
         fs.unlinkSync(tempCheckHost);
     }
 
     fs.writeFileSync(tempCheckHostLocaleSchema, hostLocaleSchemaCode, "utf8");
-    execSync(`node --check "${tempCheckHostLocaleSchema}"`, { stdio: "inherit" });
+    checkNodeSyntax(tempCheckHostLocaleSchema);
     fs.unlinkSync(tempCheckHostLocaleSchema);
 
     if (rewardsBridgeCode) {
         fs.writeFileSync(tempCheckRewardsBridge, rewardsBridgeCode, "utf8");
-        execSync(`node --check "${tempCheckRewardsBridge}"`, { stdio: "inherit" });
+        checkNodeSyntax(tempCheckRewardsBridge);
         fs.unlinkSync(tempCheckRewardsBridge);
     }
 
     if (desktopMenuChunkCode) {
         fs.writeFileSync(tempCheckDesktopMenu, desktopMenuChunkCode, "utf8");
-        execSync(`node --check "${tempCheckDesktopMenu}"`, { stdio: "inherit" });
+        checkNodeSyntax(tempCheckDesktopMenu);
         fs.unlinkSync(tempCheckDesktopMenu);
     }
 
     if (preloadCode) {
         fs.writeFileSync(tempCheckPreload, preloadCode, "utf8");
-        execSync(`node --check "${tempCheckPreload}"`, { stdio: "inherit" });
+        checkNodeSyntax(tempCheckPreload);
         fs.unlinkSync(tempCheckPreload);
     }
 
@@ -1626,7 +1680,8 @@ try {
     try { fs.unlinkSync(tempCheckDesktopMenu); } catch {}
     try { fs.unlinkSync(tempCheckRewardsBridge); } catch {}
     try { fs.unlinkSync(tempCheckPreload); } catch {}
-    console.error("[x] Erro: O código gerado possui falhas de sintaxe e foi rejeitado para evitar quebra:", e.message);
+    const syntaxDetails = e.stderr ? e.stderr.toString("utf8").trim() : "";
+    console.error("[x] Erro: o código gerado foi rejeitado para evitar falha no aplicativo:", syntaxDetails || e.message);
     process.exit(1);
 }
 

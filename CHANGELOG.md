@@ -1,3 +1,51 @@
+## v1.4.0 — ZCode 3.16.3 — 24/10/2026
+
+### Novas traduções
+
+- Auditada a compilação oficial **3.16.3 (build 8992)** e as mudanças de interface introduzidas desde a 3.15.3, incluindo os recursos da 3.16.2.
+- Adicionadas **629 entradas**: **621 IDs do catálogo atual** e **8 textos adicionais da campanha/capturas**. Uma tradução existente da mensagem de falha também foi revisada. O dicionário passou de **7.892 para 8.521 entradas**.
+- Os valores adicionados somam **3.726 palavras PT-BR**, por contagem lexical automática de sequências de letras, ignorando placeholders. Essa métrica não é uma contagem de strings únicas.
+- Traduzidos gerenciamento de sessões arquivadas, compartilhamento de conversas e artefatos, projetos com várias pastas, dispositivos remotos, SSH, WSL, Docker, sincronização, migração, recuperação de conexões, pesquisa de ferramentas e controles do painel lateral.
+- Incluídos os textos da campanha ZCode 1024, os estados de disponibilidade dos modelos GLM-5.3/GLM-5.3-Flash, “Got it” → “Entendi”, “Share” → “Compartilhar” e a mensagem “A ação falhou. Tente novamente mais tarde.” Nomes de modelos e identificadores técnicos são preservados.
+- As datas “Valid until …” passam a usar ordem e nomes dos meses em português, com suporte aos 12 meses. Os textos da campanha são aplicados também nos preloads de Recompensas e Planos.
+- Varredura final de **6.942 mensagens em inglês do IntlProvider: zero mensagens sem correspondência por ID ou texto**. Conteúdos externos dinâmicos continuam sujeitos às regras específicas do preload; a contagem do catálogo não equivale a uma garantia sobre qualquer conteúdo remoto.
+
+### Compatibilidade e consistência
+
+- Adaptados o diálogo Sobre, o crédito, os catálogos de menus, o menu da bandeja, os seletores de idioma e os manipuladores da compilação 3.16.3.
+- Os pontos de alteração dos menus e seletores passam a reconhecer IDs e estruturas estáveis, preservando os nomes minificados encontrados em cada build.
+- Preservada a escolha Português (Brasil), inglês e chinês; a bandeja relê a preferência e reconstrói seu menu ao abrir. O serviço de configurações aceita e persiste `pt-BR`.
+- Ajustadas as integrações de campanhas e recompensas: a interface permanece PT-BR, e somente os contextos/cabeçalhos enviados aos serviços que aceitam inglês/chinês são normalizados para inglês.
+- Corrigido o escape das expressões regulares geradas para tempos relativos e contagens de indicação. A leitura de preferências das webviews também aceita BOM UTF-8.
+
+### Confiabilidade dos scripts
+
+- A validação sintática chama o Node por `process.execPath` e mostra o stderr real, sem depender de `node` no PATH.
+- Incluído **Node.js portátil 24.21.0**, com licença. Instalador e restaurador procuram primeiro o runtime do pacote e depois o Node global.
+- Acrescentado um marcador calculado a partir do patcher e do dicionário. Uma tradução de revisão anterior não é confundida com o pacote atual durante a reinstalação.
+- O patcher verifica o original limpo e a versão exata antes de criar ou usar backups, inclusive quando executado diretamente. Backups modificados são preservados e rejeitados; não são sobrescritos por arquivos traduzidos.
+- Padronizados UTF-8, página de código 65001 e finais de linha dos scripts para manter os acentos no console do Windows.
+
+### Verificações realizadas
+
+- Reconstrução do ASAR da distribuição oficial 3.16.3 e checagem de todos os módulos gerados aprovadas.
+- Execução completa com **PATH vazio e Node portátil** aprovada.
+- **44 verificações do código gerado** aprovadas: textos da campanha, 12 meses, webviews, preservação do locale inglês e proteção de campos/mensagens.
+- Instalação, restauração e reinstalação locais concluídas; o SHA-256 do ASAR restaurado correspondeu exatamente ao original 3.16.3. Detecção da revisão atual retornou estado completo.
+
+### Pacote de distribuição
+
+- Versão de tradução seguinte à v1.3.0 publicada anteriormente: **v1.4.0**.
+- ZIP com dicionário, scripts de instalação/restauração, verificadores necessários, runtime e licenças.
+- **Sem README, README.ag, LEIA-ME, AGENTS, CHANGELOG ou app-pt.asar dentro do ZIP.** O changelog fica nesta descrição da release e no repositório.
+
+### Arquivo da release
+
+ZCode-Traducao-PTBR-v1.4.0-Portable.zip — 14 arquivos, 36303749 bytes.
+
+SHA-256: 0E9C72F5D1B3FFA40988EC36274A623DD80B3AD2539496FDA6FE85685F6A3D81
+
+
 ### Preferência do seletor PT-BR — ZCode 3.15.3 — 16/10/2026
 - Corrigida a prioridade de idioma na inicialização: a preferência atual registrada pelo serviço de configurações do ZCode prevalece sobre um valor antigo de `localStorage`, que podia manter a interface em inglês mesmo com `setting.json` em `pt-BR`.
 - O patcher valida esse resolvedor do `IntlProvider` e aborta se a estrutura esperada não existir. O instalador também distingue builds anteriores sem essa correção e os reconstrói a partir do backup original, em vez de encerrar como se já estivesse atualizado.

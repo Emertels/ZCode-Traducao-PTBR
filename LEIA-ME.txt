@@ -1,3 +1,8 @@
+VERSÃO ATUAL 1.4.0 — ZCode 3.16.3 — 24/10/2026
+629 entradas novas, total de 8.521; catálogo atual com 6.942 mensagens em inglês auditadas; seletores, menus, campanhas e recompensas adaptados à 3.16.3; Node portátil incluído; backups limpos verificados antes de qualquer patch.
+O ZIP portátil inclui Node.js e licenças. Extraia a pasta inteira antes de usar os atalhos.
+README, LEIA-ME, AGENTS e CHANGELOG ficam somente no repositório e nas notas da release, fora do ZIP.
+
   • Correção de 16/10/2026: seletor rápido do perfil aceita Português (Brasil); menu da bandeja consulta o idioma atual e renova seus rótulos a cada clique direito, respeitando PT-BR, inglês e chinês. Para aplicar, encerre o ZCode pela bandeja e execute Instalar-Traducao.bat.
   • Correção de 14/10/2026: contexto remoto de Recompensas normalizado para en-US no locale pt-BR; novos plugins do marketplace e rótulos/contadores da página de indicações traduzidos.
 ==============================================================================

@@ -1,4 +1,5 @@
-﻿# ==============================================================================
+﻿$null = & chcp.com 65001
+# ==============================================================================
 #  Restaurador do ZCode Original de fábrica
 #  Pacote de Tradução por: Emerson Teles
 # ==============================================================================
@@ -6,6 +7,14 @@ $utf8Console = New-Object System.Text.UTF8Encoding($false)
 [Console]::InputEncoding = $utf8Console
 [Console]::OutputEncoding = $utf8Console
 $OutputEncoding = $utf8Console
+
+function Resolve-TranslationNode {
+    $portableNode = Join-Path $PSScriptRoot 'runtime\node.exe'
+    if (Test-Path -LiteralPath $portableNode -PathType Leaf) {
+        return [pscustomobject]@{ Source = $portableNode }
+    }
+    return Get-Command node.exe -ErrorAction SilentlyContinue
+}
 
 function Read-OpenChoice([string]$Prompt) {
     Write-Host $Prompt -NoNewline -ForegroundColor White
@@ -237,7 +246,7 @@ if (-not $foundBackup) {
     # Uma instalação original recém-instalada pode não ter criado _backups.
     # Verifique o ASAR ativo antes de informar que não há nada para restaurar.
     $verifier = Join-Path $PSScriptRoot "tools\verify-clean-asar.cjs"
-    $node = Get-Command node -ErrorAction SilentlyContinue
+    $node = Resolve-TranslationNode
     $installedAsarClean = $false
     if ($buildKey -and $node -and (Test-Path -LiteralPath $verifier -PathType Leaf) -and (Test-Path -LiteralPath $targetAsar -PathType Leaf)) {
         & $node.Source $verifier "zcode" $targetAsar $buildKey
@@ -266,7 +275,7 @@ if (-not $foundBackup) {
 }
 
 $verifier = Join-Path $PSScriptRoot "tools\verify-clean-asar.cjs"
-$node = Get-Command node -ErrorAction SilentlyContinue
+$node = Resolve-TranslationNode
 if (-not $node -or -not (Test-Path $verifier)) {
     Write-Host "[x] Não foi possível verificar o backup. Confirme o Node.js e os arquivos do pacote." -ForegroundColor Red
     Read-OpenChoice "Pressione Enter ou Esc para sair."

@@ -55,3 +55,12 @@ Se o backup original da versão não estiver em _backups, o restaurador não con
 - O seletor rápido do perfil agora encaminha `pt-BR` ao serviço de configurações.
 - O menu da bandeja relê `localePreference`/`locale` a cada abertura e reconstrói os rótulos em clique direito, para refletir mudanças entre PT-BR, inglês e chinês.
 - A detecção de tradução completa exige os marcadores dos dois comportamentos para reinstalar builds incompletos com segurança a partir do backup limpo.
+
+## Atualização 1.4.0 — ZCode 3.16.3 — 24/10/2026
+- A compilação atual usa catálogo Sobre jC/fp. Mantenha os fallbacks anteriores e os catálogos originais de inglês e chinês.
+- Os seletores e menus são localizados por IDs/estrutura e preservam nomes minificados. Valide o resultado antes de trocar o ASAR.
+- O marcador ptbr-zcode-build depende do patcher e do dicionário; revisões antigas devem ser recompostas do backup limpo, nunca confundidas com a revisão atual.
+- Verifique a limpeza do ASAR pelo verificador mesmo na execução direta do patcher; nenhum arquivo modificado pode virar backup original.
+- Prefira runtime/node.exe do ZIP e use process.execPath nos subprocessos. Preserve UTF-8 com BOM nos scripts PowerShell e a página de código 65001.
+- Mantenha a normalização pt-BR para en-US restrita aos protocolos de campanhas/recompensas que não aceitam português, preservando a interface PT-BR.
+- Exclua documentação, changelog, ASAR compilado e ferramentas de manutenção desnecessárias do ZIP; inclua runtime e licenças.
