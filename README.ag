@@ -1,6 +1,10 @@
-## Versão atual: 1.4.0 — ZCode 3.16.3 — 24/10/2026
+## Versão atual: 1.5.0 — ZCode 3.17.1 — 30/10/2026
 
-629 entradas novas, total de 8.521; catálogo atual com 6.942 mensagens em inglês auditadas; seletores, menus, campanhas e recompensas adaptados à 3.16.3; Node portátil incluído; backups limpos verificados antes de qualquer patch.
+### Correção local pós-release — 27/10/2026 (ainda não publicada)
+
+Acrescentadas as traduções “Models” → “Modelos”, “Effort” → “Esforço”, os selos “default/Default” → “padrão/Padrão” e os rótulos fixos “Turn execution failed”/“Bad Request” nos detalhes do erro. Para aplicar estas revisões locais, feche o ZCode e execute **Instalar-Traducao.bat**. Elas ainda não estão no ZIP v1.5.0 publicado.
+
+315 traduções adicionadas desde a v1.4.0; catálogo 3.17.1 auditado; marketplace coberto com 26 mapeamentos dinâmicos, instalador validado e backup limpo da versão preservado.
 
 Baixe o ZIP portátil na página de Releases, extraia a pasta inteira e execute **Instalar-Traducao.bat**. Para voltar ao original da mesma versão, use **Restaurar-Original.bat**. O ZIP inclui runtime e licenças, com documentação e changelog disponíveis apenas no repositório e na descrição da release.
 
@@ -25,6 +29,10 @@ Corrigido o instalador `aplicar-traducao.ps1`, que estava sem BOM UTF-8 e exibia
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
 
 <!-- zcode-status -->
+## v1.5.0 — ZCode 3.17.1 — 30/10/2026
+
+315 traduções acrescentadas desde a v1.4.0, incluindo os cartões e categorias do marketplace dos prints. O changelog detalhado está no repositório e nas notas da release.
+
 ## Correção do seletor PT-BR — 16/10/2026
 
 - Corrigido o schema de idioma do serviço de configurações no processo host. Antes, a interface exibia e aceitava `pt-BR`, mas o host rejeitava o valor ao ler `setting.json` e o substituía por chinês/sistema. O patcher agora libera `pt-BR` tanto em `locale` quanto em `localePreference`.

@@ -1,3 +1,45 @@
+## v1.5.0 — ZCode 3.17.1 — 30/10/2026
+
+### Traduções e varredura
+
+- Atualizada a tradução para o ZCode **3.17.1**, a versão instalada e atual.
+- O catálogo cresceu de **8.521 para 8.836 entradas**: **315 traduções adicionadas** desde a v1.4.0, incluindo **284 IDs novos do IntlProvider** e textos dinâmicos do marketplace. Os valores adicionados somam **2.881 palavras PT-BR** por contagem lexical, ignorando placeholders.
+- Traduzidos os cartões vistos nos prints para Excalidraw, PhotoCraft, VectorCraft, PdfCraft, DesignCraft, WordCraft, GridCraft, DeckCraft, CADCraft, SoundCraft, KiCad, AgentNetwork, Autoresearch, Jev Decisions e Ruic Card. Foram incluídas descrições integrais, mesmo quando a interface as corta visualmente, além da categoria chinesa “游戏/3D” e dos títulos e resumos das categorias de design, produtividade, hospedagem, ferramentas e negócios. Os nomes dos plugins e termos técnicos (A2A, MCP, KiCad, DRC, Gerber, BOM, CPL, Blender e Three.js) foram preservados.
+- A primeira auditoria do catálogo 3.17.1 encontrou 284 mensagens sem cobertura; a varredura final do IntlProvider ficou com **0 mensagens sem tradução**. As traduções de marketplace são conferidas separadamente no pré-teste e incorporadas ao mapa DOM para textos dinâmicos.
+
+### Instalador e validação
+
+- O pré-teste agora exige os **26 textos dinâmicos** mapeados nesta revisão antes de reconstruir o ASAR.
+- Atualização aplicada sobre o backup limpo da versão exata 3.17.1; backup original preservado. Sintaxe dos scripts e JSON conferidos, e o ZCode foi reaberto após a instalação.
+- O ZIP de distribuição não inclui README, LEIA-ME, AGENTS, CHANGELOG nem ASAR estático. O changelog completo fica nesta descrição da release e no repositório.
+
+## Varredura de atualização — ZCode 3.17.1 — 30/10/2026
+
+- Reexaminado o catálogo `IntlProvider` do ZCode 3.17.1: **7.208 mensagens** examinadas e **284 mensagens novas/sem cobertura** identificadas na primeira varredura.
+- Adicionadas **284 traduções por ID** ao `pt_dictionary.json`, com **2.243 palavras** nos valores PT-BR adicionados. Contagem de palavras por sequências lexicais; placeholders como `{count}` permanecem preservados.
+- Cobertos os novos fluxos de gerenciamento e remoção de projetos, sincronização de configuração entre dispositivos, serviços remotos, conexões MCP, personalização, edição de imagens, ações de arquivos e confirmação do modo de acesso total.
+- A varredura final do catálogo 3.17.1 agora encontra **0 mensagens sem tradução por ID ou texto**. O scanner conta 7.209 propriedades depois da instalação; uma delas, `integrado: /ilink/bot/getupdates`, é um falso positivo técnico da expressão de extração, não uma mensagem da interface. O patcher foi adaptado ao novo catálogo do diálogo “Sobre” (`ZP`) no ZCode 3.17.x; o ASAR original limpo da versão exata foi preservado em `_backups/3.17.1` e a tradução foi instalada e aberta com sucesso.
+
+## Ajuste de erro na campanha — ZCode 3.16.3 — 30/10/2026
+
+- Corrigida a entrada `marketingTouch.failed`, que estava parcialmente em inglês (“The action failed. Tente novamente later.”), para “A ação falhou. Tente novamente mais tarde.”
+- O dicionário continua com **8.526 entradas**; a tradução corrigida será incorporada pelo `patch-zcode.cjs` na próxima instalação. Atualização local, sem publicação no GitHub.
+
+## Detalhes de erros de modelo — ZCode 3.16.3 — 27/10/2026
+
+- “Turn execution failed” já tinha tradução, mas podia permanecer em inglês quando aparecia dentro de detalhes monoespaçados `<pre>`/`<code>`. O tradutor agora localiza apenas linhas que correspondem exatamente aos rótulos conhecidos, preservando IDs, parâmetros e respostas técnicas do provedor.
+- Adicionada a tradução “Bad Request” → “Solicitação inválida”.
+- O dicionário passa de 8.525 para 8.526 entradas. O pré-teste exige as duas traduções tanto no dicionário quanto no tradutor DOM; a detecção de instalação completa também confere os rótulos gerados.
+- Correção local para futura revisão, ainda não publicada no GitHub.
+
+## Correção de rótulos do provedor — ZCode 3.16.3 — 27/10/2026
+
+- Traduzidos os títulos do seletor do provedor: “Models” → “Modelos” e “Effort” → “Esforço”.
+- Traduzidos os selos de configuração dos provedores: “default” → “padrão” e “Default” → “Padrão”.
+- Adicionadas 4 entradas ao dicionário, que passa de 8.521 para 8.525 termos. Os mesmos rótulos foram incluídos no tradutor DOM para cobrir os menus e selos renderizados dinamicamente.
+- Correção complementar posterior à release v1.4.0; o ZIP publicado permanece inalterado até uma nova publicação solicitada.
+- Patcher reconstruído a partir do backup limpo 3.16.3; verificações sintáticas dos módulos gerados aprovadas e instalação local detectada como completa. O estado completo agora também exige os quatro rótulos no preload instalado.
+
 ## v1.4.0 — ZCode 3.16.3 — 24/10/2026
 
 ### Novas traduções

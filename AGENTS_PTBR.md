@@ -64,3 +64,8 @@ Se o backup original da versão não estiver em _backups, o restaurador não con
 - Prefira runtime/node.exe do ZIP e use process.execPath nos subprocessos. Preserve UTF-8 com BOM nos scripts PowerShell e a página de código 65001.
 - Mantenha a normalização pt-BR para en-US restrita aos protocolos de campanhas/recompensas que não aceitam português, preservando a interface PT-BR.
 - Exclua documentação, changelog, ASAR compilado e ferramentas de manutenção desnecessárias do ZIP; inclua runtime e licenças.
+
+## Correção local dos rótulos do provedor — 27/10/2026
+- Mantenha no dicionário e no mapa DOM os rótulos `Models` → `Modelos`, `Effort` → `Esforço`, `default` → `padrão` e `Default` → `Padrão`.
+- O patcher deve validar esses quatro rótulos e os dois marcadores de erro antes de reconstruir o ASAR; mudanças no patcher/dicionário geram novo marcador e levam o instalador a reconstruir a partir do backup limpo da versão exata.
+- Em blocos monoespaçados de erro (`<pre>`/`<code>`), traduza somente linhas inteiras dos marcadores conhecidos `Turn execution failed` e `Bad Request`; preserve todo o restante da mensagem técnica, IDs e parâmetros.

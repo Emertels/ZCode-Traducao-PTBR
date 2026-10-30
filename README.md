@@ -1,8 +1,12 @@
-## Versão atual: 1.4.0 — ZCode 3.16.3 — 24/10/2026
+## Versão atual: 1.5.0 — ZCode 3.17.1 — 30/10/2026
 
-629 entradas novas, total de 8.521; catálogo atual com 6.942 mensagens em inglês auditadas; seletores, menus, campanhas e recompensas adaptados à 3.16.3; Node portátil incluído; backups limpos verificados antes de qualquer patch.
+### Correção local pós-release — 27/10/2026 (ainda não publicada)
 
-Baixe o ZIP portátil na página de Releases, extraia a pasta inteira e execute **Instalar-Traducao.bat**. Para voltar ao original da mesma versão, use **Restaurar-Original.bat**. O ZIP inclui runtime e licenças, com documentação e changelog disponíveis apenas no repositório e na descrição da release.
+Acrescentadas A tradução v1.5.0 foi aplicada à instalação atual do ZCode 3.17.1; o ZIP desta versão reúne os scripts e o dicionário atualizados.
+
+315 traduções adicionadas desde a v1.4.0; catálogo 3.17.1 auditado; marketplace coberto com 26 mapeamentos dinâmicos, instalador validado e backup limpo da versão preservado.
+
+Baixe o ZIP portátil v1.5.0 na página de Releases, extraia a pasta inteira e execute **Instalar-Traducao.bat**. Para voltar ao original da mesma versão, use **Restaurar-Original.bat**. O ZIP inclui runtime e licenças, com documentação e changelog disponíveis apenas no repositório e na descrição da release.
 
 Instalação, restauração e reinstalação foram conferidas na versão indicada, preservando os backups originais. Histórico detalhado: [CHANGELOG.md](CHANGELOG.md).
 
@@ -19,12 +23,16 @@ O patcher acompanha as estruturas atuais do diálogo “Sobre”, da preferênci
 Corrigido o instalador `aplicar-traducao.ps1`, que estava sem BOM UTF-8 e exibia caracteres como `TRADUÃ‡ÃƒO`. Os lançadores BAT não alteram a página de código; os dois títulos incompletos nos logs Node também receberam os acentos corretos.
 
 
-![Versão](https://img.shields.io/badge/Versão-v1.3.0-teal?style=for-the-badge)
+![Versão](https://img.shields.io/badge/Versão-v1.5.0-teal?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/Idioma-Português%20(Brasil)-green?style=for-the-badge)
 
 Pacote portátil de localização do **ZCode** para Português do Brasil (pt-BR). O **Patcher Dinâmico Automatizado** detecta a versão instalada, preserva o número oficial e aplica a tradução usando uma base original limpa e validada da mesma versão. Atualizações futuras podem exigir ajuste se o formato ou os pontos de patch mudarem; o instalador interrompe com segurança quando não consegue validar a base.
 
 <!-- zcode-status -->
+## v1.5.0 — ZCode 3.17.1 — 30/10/2026
+
+315 traduções acrescentadas desde a v1.4.0, incluindo os cartões e categorias do marketplace dos prints. O changelog detalhado está no repositório e nas notas da release.
+
 ## Correção do seletor PT-BR — 16/10/2026
 
 - Corrigido o schema de idioma do serviço de configurações no processo host. Antes, a interface exibia e aceitava `pt-BR`, mas o host rejeitava o valor ao ler `setting.json` e o substituía por chinês/sistema. O patcher agora libera `pt-BR` tanto em `locale` quanto em `localePreference`.

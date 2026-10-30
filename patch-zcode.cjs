@@ -31,6 +31,52 @@ if (!fs.existsSync(srcAsar)) {
 const dict = JSON.parse(fs.readFileSync(dictPath, "utf8"));
 console.log("[*] Dicionário PT-BR carregado com", Object.keys(dict).length, "termos traduzidos.");
 
+const requiredDomTranslations = {
+    Models: "Modelos",
+    Effort: "Esforço",
+    default: "padrão",
+    Default: "Padrão",
+    "Turn execution failed": "Falha na execução do turno",
+    "Bad Request": "Solicitação inválida"
+};
+const missingRequiredDictionaryEntries = Object.entries(requiredDomTranslations)
+    .filter(([source, translated]) => dict[source] !== translated);
+if (missingRequiredDictionaryEntries.length) {
+    console.error("[x] O dicionário não contém traduções obrigatórias da interface:", missingRequiredDictionaryEntries.map(([source]) => source).join(", "));
+    process.exit(1);
+}
+
+// Descrições do marketplace são texto dinâmico; garanta que o catálogo recente
+// dos plugins continue coberto pelo tradutor DOM mesmo sem IDs IntlProvider.
+const marketplaceDomKeys = [
+    "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate. It measures, keeps what works, reverts what doesn't, and repeats. Provides init/run/log experiment tools (MCP), a loop protocol skill, guardrails (frozen benchmark, checks backpressure, memory injection, Stop continuation), and static + live dashboards.",
+    "让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。",
+    "PhotoCraft image editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "VectorCraft vector illustration in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "PdfCraft PDF editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "DesignCraft page layout in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "WordCraft word processing in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "GridCraft spreadsheets in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "DeckCraft presentations in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "CADCraft CAD drafting in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "SoundCraft audio editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+    "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+    "Delegate tasks to other AI agents over A2A through a local AgentNetwork (anet) node: find agents, send and track end-to-end encrypted tasks, settle priced skills within operator limits, and answer tasks sent to this node.",
+    "Calibrated judgment tools for ZCode agents via the community jev-mcp server: verify claims against evidence, screen untrusted text, classify, decide, and gate task completion. Ships a skill that teaches when to reach for a judgment tool instead of answering directly.",
+    "Holographic collectible-card generator: layered artwork + Blender + Three.js, in two routes - paint the four layers from a description or reference image, or derive them from a photo you already have (rembg cutout, optional watermark removal, animation render and MP4 / WeChat-sized GIF deliverables). Outputs an interactive parallax card website plus an editable card.blend project.",
+    "游戏/3D", "Design, Creative & Media", "Design, creative, and media tools.",
+    "Productivity & Project Management", "Plan work, track issues, sign documents, and manage your notes and files.",
+    "Cloud Hosting & Deployment", "Deploy and host your apps, sites, and their backends.",
+    "Developer Tools", "APIs, services, and tools to build, test, secure, and run your apps.",
+    "Business", "Payments, CRM, accounting, data, identity, customer support, marketing, and workflow automation."
+];
+const missingMarketplaceEntries = marketplaceDomKeys.filter(key => !dict[key] || dict[key] === key);
+if (missingMarketplaceEntries.length) {
+    console.error("[x] Faltam traduções obrigatórias dos cartões do marketplace:", missingMarketplaceEntries.join(" | "));
+    process.exit(1);
+}
+const marketplaceDomTranslations = Object.fromEntries(marketplaceDomKeys.map(key => [key, dict[key]]));
+
 const campaignTextKeys = ["The action failed. Please try again later.", "Got it", "Campaign rules ready", "ZCode 1024 Programmer's Day", "500M Tokens", "GLM-5.3-Flash + GLM-5.3 · 500M Tokens", "You now have access to ZCode 1024 Dev Day", "GLM-5.3-Flash is ready to use.", "GLM-5.3 is ready to use.", "Share", "Valid until"];
 const campaignTextTranslations = Object.fromEntries(campaignTextKeys.map(key => [key, dict[key]]).filter(([, value]) => value));
 const translationBuildMarker = "/* ptbr-zcode-build:" + crypto.createHash("sha256").update(fs.readFileSync(__filename)).update(JSON.stringify(dict)).digest("hex") + " */";
@@ -125,7 +171,10 @@ function isAlreadyTranslatedAsar(filePath) {
             const pBuf = Buffer.alloc(prelEntry.size);
             fs.readSync(fd, pBuf, 0, prelEntry.size, bOff + parseInt(prelEntry.offset, 10));
             const preloadSource = pBuf.toString("utf8");
-            preloadTranslated = preloadSource.includes("_ptDomMap") && preloadSource.includes(translationBuildMarker);
+            preloadTranslated = preloadSource.includes("_ptDomMap") && preloadSource.includes(translationBuildMarker) &&
+                Object.entries(requiredDomTranslations).every(([source, translated]) =>
+                    preloadSource.includes(`${JSON.stringify(source)}: ${JSON.stringify(translated)}`)
+                );
         }
         if (intlEntry) {
             const iBuf = Buffer.alloc(intlEntry.size);
@@ -291,6 +340,10 @@ if (mainCode.includes(aboutCredit)) {
         mainCode = mainCode.replace(latestAboutCopyrightMarkup, latestAboutCopyrightMarkup + '\n            <div style="margin-top:6px;font-size:12px;font-weight:400;color:#00adb5;letter-spacing:0.02em;text-align:left;">' + aboutCredit + '</div>');
         mainCode = mainCode.replace('VN=256,qN=312', 'VN=256,qN=345');
         console.log(`    -> Crédito '${aboutCredit}' adicionado ao diálogo Sobre da versão atual.`);
+    } else if (mainCode.includes('<div>${jr(e.copyright)}</div>') && !mainCode.includes(aboutCredit)) {
+        const currentAboutCopyrightMarkup = '<div>${jr(e.copyright)}</div>';
+        mainCode = mainCode.replace(currentAboutCopyrightMarkup, currentAboutCopyrightMarkup + '\n            <div style="margin-top:6px;font-size:12px;font-weight:400;color:#00adb5;letter-spacing:0.02em;text-align:left;">' + aboutCredit + '</div>');
+        console.log(`    -> Crédito '${aboutCredit}' adicionado ao diálogo Sobre da estrutura 3.17.x.`);
     } else {
         console.log("    -> O modelo do crédito do diálogo Sobre não precisou de alteração nesta compilação.");
     }
@@ -333,6 +386,15 @@ if (!aboutLocalePatched) {
         mainCode = mainCode.slice(0, latestAboutMapEnd) + ',"pt-BR":' + ptAboutObj + mainCode.slice(latestAboutMapEnd);
         aboutLocalePatched = true;
         console.log("    -> Catálogo PT-BR do diálogo Sobre adicionado à estrutura do ZCode 3.16.3.");
+    }
+}
+if (!aboutLocalePatched) {
+    const structuredAboutMapStart = mainCode.indexOf('ZP={', mainCode.indexOf('ZCode Desktop App'));
+    const structuredAboutMapEnd = structuredAboutMapStart >= 0 ? mainCode.indexOf('};function tt(', structuredAboutMapStart) : -1;
+    if (structuredAboutMapStart >= 0 && structuredAboutMapEnd >= 0) {
+        mainCode = mainCode.slice(0, structuredAboutMapEnd) + ',"pt-BR":' + ptAboutObj + mainCode.slice(structuredAboutMapEnd);
+        aboutLocalePatched = true;
+        console.log("    -> Catálogo PT-BR do diálogo Sobre adicionado à estrutura ZP do ZCode 3.17.x.");
     }
 }
 if (!aboutLocalePatched) {
@@ -391,6 +453,16 @@ const latestAboutNameNeedle = 'applicationName:GN,appVersion:o.appVersion';
 if (mainCode.includes(latestAboutNameNeedle)) {
     mainCode = mainCode.replace(latestAboutNameNeedle, 'applicationName:String(t).toLowerCase().startsWith("en")?GN:"Aplicativo do ZCode para desktop",appVersion:o.appVersion');
     console.log("    -> Nome do aplicativo localizado no diálogo Sobre do ZCode 3.16.3.");
+}
+const structuredAboutLocaleNeedle = 'function $p(e){return ZP[e]??ZP[At]}';
+if (mainCode.includes(structuredAboutLocaleNeedle)) {
+    mainCode = mainCode.replace(structuredAboutLocaleNeedle, 'function $p(e){return String(e).toLowerCase().startsWith("en")?ZP["en-US"]:(ZP["pt-BR"]??ZP[e]??ZP[At])}');
+    console.log("    -> Diálogo Sobre localizado em PT-BR na estrutura ZP, mantendo o inglês quando selecionado.");
+}
+const structuredAboutNameNeedle = 'applicationName:$F,appVersion:o.appVersion';
+if (mainCode.includes(structuredAboutNameNeedle)) {
+    mainCode = mainCode.replace(structuredAboutNameNeedle, 'applicationName:String(t).toLowerCase().startsWith("en")?$F:"Aplicativo do ZCode para desktop",appVersion:o.appVersion');
+    console.log("    -> Nome do aplicativo no diálogo Sobre localizado condicionalmente na estrutura 3.17.x.");
 }
 
 // O diálogo Sobre recebe copyright nativo do Electron, que ignora o catálogo
@@ -931,6 +1003,10 @@ if (preloadCode) {
             "Keyboard Shortcuts": "Atalhos do Teclado",
             "Search shortcuts": "Pesquisar atalhos",
             "Reset all to defaults": "Restaurar padrões",
+            "Models": "Modelos",
+            "Effort": "Esforço",
+            "default": "padrão",
+            "Default": "Padrão",
             "Command": "Comando",
             "Keybinding": "Atalho",
             "Actions": "Ações",
@@ -1082,6 +1158,7 @@ if (preloadCode) {
             "Account request credential is unavailable:": "A credencial de solicitação da conta não está disponível:",
             "Account request credential is unavailable": "A credencial de solicitação da conta não está disponível",
             "Turn execution failed": "Falha na execução do turno",
+            "Bad Request": "Solicitação inválida",
             "Internal error": "Erro interno",
             "Compact failed": "Falha na compactação",
             "Rewind failed": "Falha no retrocesso",
@@ -1325,6 +1402,7 @@ if (preloadCode) {
             "Warning: Updates Apply Automatically": "Aviso: as atualizações são aplicadas automaticamente"
         };
         Object.assign(_ptDomMap, ${JSON.stringify(campaignTextTranslations)});
+        Object.assign(_ptDomMap, ${JSON.stringify(marketplaceDomTranslations)});
         const _filteredMap = {};
         for (const [k, v] of Object.entries(_ptDomMap)) {
             if (k && v && k !== v) {
@@ -1333,6 +1411,27 @@ if (preloadCode) {
         }
         const _sortedDomEntries = Object.entries(_filteredMap).sort((a, b) => b[0].length - a[0].length);
         const _visited = new WeakSet();
+
+        function _translateKnownErrorDetailText(textNode) {
+            if (!textNode || textNode.nodeType !== 3) return false;
+            const value = textNode.nodeValue || "";
+            const translated = value.replace(/(^|\\r?\\n)([ \\t]*)(Turn execution failed|Bad Request)([ \\t]*)(?=\\r?\\n|$)/g, (match, lineBreak, indent, label, suffix) =>
+                lineBreak + indent + (_filteredMap[label] || label) + suffix
+            );
+            if (translated === value) return false;
+            textNode.nodeValue = translated;
+            return true;
+        }
+
+        function _translateKnownErrorDetailTree(root) {
+            if (!root) return;
+            if (root.nodeType === 3) {
+                _translateKnownErrorDetailText(root);
+                return;
+            }
+            if (root.nodeType !== 1 || root.tagName === "SCRIPT" || root.tagName === "STYLE") return;
+            for (let i = 0; i < root.childNodes.length; i++) _translateKnownErrorDetailTree(root.childNodes[i]);
+        }
 
         function _translateExactMappedText(node) {
             if (!node) return;
@@ -1359,6 +1458,7 @@ if (preloadCode) {
 
             try {
                 if (node.nodeType === 3) {
+                    if (_translateKnownErrorDetailText(node)) return;
                     const val = node.nodeValue;
                     if (!val) return;
                     const t = val.trim();
@@ -1399,7 +1499,11 @@ if (preloadCode) {
                     }
                 } else if (node.nodeType === 1) {
                     const tag = node.tagName;
-                    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE' || tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'CANVAS') return;
+                    if (tag === 'PRE' || tag === 'CODE') {
+                        _translateKnownErrorDetailTree(node);
+                        return;
+                    }
+                    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'CANVAS') return;
                     const cl = node.className;
                     if (typeof cl === 'string' && (cl.includes('monaco') || cl.includes('prose') || cl.includes('conversation') || cl.includes('message') || cl.includes('terminal') || cl.includes('xterm') || cl.includes('chat'))) {
                         _translateExactMappedText(node);
@@ -1433,6 +1537,7 @@ if (preloadCode) {
                         // React can update existing text nodes without inserting new DOM nodes.
                         // Translate exact mapped values only; never walk the page on text mutations.
                         const textNode = m.target;
+                        if (_translateKnownErrorDetailText(textNode)) continue;
                         const value = textNode.nodeValue || "";
                         const key = value.trim();
                         const deadline = formatCampaignDeadline(key);
@@ -1467,6 +1572,12 @@ if (preloadCode) {
         }
     } catch (e) {}
     `;
+    const missingRequiredDomEntries = Object.entries(requiredDomTranslations)
+        .filter(([source, translated]) => !domTranslator.includes(`${JSON.stringify(source)}: ${JSON.stringify(translated)}`));
+    if (missingRequiredDomEntries.length) {
+        console.error("[x] O tradutor DOM não contém todas as traduções obrigatórias; instalação cancelada:", missingRequiredDomEntries.map(([source]) => source).join(", "));
+        process.exit(1);
+    }
     preloadCode = preloadCode + "\n" + domTranslator + "\n" + translationBuildMarker;
     console.log("    -> Injetado observador DOM de tradução dinâmica no preload index.cjs.");
 }

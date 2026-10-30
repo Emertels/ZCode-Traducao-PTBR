@@ -1,5 +1,7 @@
-VERSÃO ATUAL 1.4.0 — ZCode 3.16.3 — 24/10/2026
-629 entradas novas, total de 8.521; catálogo atual com 6.942 mensagens em inglês auditadas; seletores, menus, campanhas e recompensas adaptados à 3.16.3; Node portátil incluído; backups limpos verificados antes de qualquer patch.
+VERSÃO ATUAL 1.5.0 — ZCode 3.17.1 — 30/10/2026
+CORREÇÃO LOCAL PÓS-RELEASE — 27/10/2026 (AINDA NÃO PUBLICADA)
+Acrescentadas as traduções “Models” → “Modelos”, “Effort” → “Esforço”, os selos “default/Default” → “padrão/Padrão” e os rótulos fixos “Turn execution failed”/“Bad Request” nos detalhes do erro. Para aplicar, feche o ZCode e execute Instalar-Traducao.bat. As correções ainda não estão no ZIP v1.5.0 publicado.
+315 traduções adicionadas desde a v1.4.0; catálogo 3.17.1 auditado; marketplace coberto com 26 mapeamentos dinâmicos, instalador validado e backup limpo da versão preservado.
 O ZIP portátil inclui Node.js e licenças. Extraia a pasta inteira antes de usar os atalhos.
 README, LEIA-ME, AGENTS e CHANGELOG ficam somente no repositório e nas notas da release, fora do ZIP.
 
