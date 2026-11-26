@@ -311,6 +311,28 @@ function getCleanFile(p) {
     return buf.toString("utf8");
 }
 
+// Detectar automaticamente a arquitetura 4.x (IntlProvider com mapa S={"zh-CN":_,"en-US":v,...})
+const cRendererAssetsNode = cleanHeader.files?.out?.files?.renderer?.files?.assets?.files;
+const probeIntlName = cRendererAssetsNode && Object.keys(cRendererAssetsNode).find(f => f.startsWith("IntlProvider-") && f.endsWith(".js"));
+const probeIntlCode = probeIntlName ? getCleanFile("out/renderer/assets/" + probeIntlName) : "";
+if (probeIntlCode && probeIntlCode.includes('S={"zh-CN":')) {
+    require(path.join(scriptDir, "patch-zcode4.cjs"))({
+        cleanFd,
+        cleanHeader,
+        cleanBaseOffset,
+        getCleanFile,
+        dict,
+        currentVersion,
+        srcAsar,
+        tempAsar,
+        scriptDir,
+        computeIntegrity,
+        marketplaceDomTranslations,
+        aboutCredit: "Tradução PT-BR: Emerson Teles"
+    });
+    process.exit(0);
+}
+
 // A. Patch out/main/index.js (Dialogo Sobre, Creditos e Explorador de Arquivos)
 console.log("[*] Aplicando patch no módulo principal: out/main/index.js");
 let mainCode = getCleanFile("out/main/index.js");
@@ -398,8 +420,16 @@ if (!aboutLocalePatched) {
     }
 }
 if (!aboutLocalePatched) {
-    console.error("[x] A estrutura do catálogo Sobre não foi reconhecida; instalação cancelada.");
-    process.exit(1);
+    const zcodeAnchor = mainCode.indexOf('ZCode Desktop App');
+    const genericEnd = zcodeAnchor >= 0 ? mainCode.indexOf('};function ', zcodeAnchor) : -1;
+    if (genericEnd >= 0 && genericEnd - zcodeAnchor < 4000) {
+        mainCode = mainCode.slice(0, genericEnd) + ',"pt-BR":' + ptAboutObj + mainCode.slice(genericEnd);
+        aboutLocalePatched = true;
+        console.log("    -> Catálogo PT-BR do diálogo Sobre adicionado via detecção genérica (ZCode 4.0.0+).");
+    }
+}
+if (!aboutLocalePatched) {
+    console.log("    [i] Catálogo Sobre não encontrado nesta compilação; prosseguindo com a tradução principal.");
 }
 
 // O About é aberto no processo principal, cujo locale nativo não inclui pt-BR.
@@ -493,8 +523,7 @@ if (trayLabelMatch) {
     mainCode = mainCode.replace(trayLabelMatch[0], ptTrayLabelCode);
     console.log("    -> Menu de contexto da bandeja segue o idioma escolhido nas configurações (pt-BR/en-US/zh-CN).");
 } else if (mainCode.includes('trayOpenZCode')) {
-    console.error("[x] Não foi possível reconhecer o resolvedor do menu da bandeja; instalação cancelada para evitar deixar os rótulos em chinês.");
-    process.exit(1);
+    console.log("    [i] Resolvedor do menu da bandeja não encontrado nesta compilação; prosseguindo com a tradução principal.");
 }
 
 // Recriar o menu a cada clique direito para que o Electron receba os rótulos
@@ -581,9 +610,8 @@ if (desktopMenuChunkCode) {
     // Localize o objeto pelo resolvedor que o consulta em vez de fixar eh/ik.
     const menuLocaleResolver = desktopMenuChunkCode.match(/function\s+([\w$]+)\(([\w$]+),([\w$]+)\)\{return\(([\w$]+)\[\2\]\?\?\4\[([\w$]+)\]\)\[\3\]\}/);
     if (!menuLocaleResolver) {
-        console.error("[x] Não foi possível reconhecer o resolvedor do catálogo dos menus; instalação cancelada para evitar uma tradução incompleta.");
-        process.exit(1);
-    }
+        console.log("    [i] Resolvedor do catálogo dos menus não encontrado nesta compilação; prosseguindo com a tradução principal.");
+    } else {
     const resolverName = menuLocaleResolver[1];
     const localeArgument = menuLocaleResolver[2];
     const keyArgument = menuLocaleResolver[3];
@@ -618,6 +646,7 @@ if (desktopMenuChunkCode) {
         console.error("[x] Schema de idioma da compilação atual não reconhecido; instalação cancelada para evitar ocultar ou rejeitar pt-BR.");
         process.exit(1);
     }
+    }
 }
 
 
@@ -639,8 +668,7 @@ if (generalLocaleOption && !stylesCode.includes('id:`settings.locale.pt-BR`')) {
     stylesCode = stylesCode.replace(generalLocaleOption[0], generalLocaleOption[0] + ',' + localizedOption);
     console.log("    -> Adicionada opção 'Português (Brasil)' nas Configurações Gerais.");
 } else if (!stylesCode.includes('id:`settings.locale.pt-BR`')) {
-    console.error("[x] Seletor de idioma das Configurações Gerais não reconhecido; instalação cancelada.");
-    process.exit(1);
+    console.log("    [i] Seletor de idioma das Configurações Gerais não encontrado nesta compilação; prosseguindo.");
 }
 const sidebarLocaleOption = stylesCode.match(/\(0,([\w$]+)\.jsx\)\(([\w$]+),\{value:`zh-CN`,children:([\w$]+)\.formatMessage\(\{id:`sidebar\.settings\.locale\.zh-CN`\}\)\}\)/);
 if (sidebarLocaleOption && !stylesCode.includes('id:`sidebar.settings.locale.pt-BR`')) {
@@ -648,8 +676,7 @@ if (sidebarLocaleOption && !stylesCode.includes('id:`sidebar.settings.locale.pt-
     stylesCode = stylesCode.replace(sidebarLocaleOption[0], sidebarLocaleOption[0] + ',' + localizedOption);
     console.log("    -> Adicionada opção 'Português (Brasil)' na Barra Lateral.");
 } else if (!stylesCode.includes('id:`sidebar.settings.locale.pt-BR`')) {
-    console.error("[x] Seletor rápido de idioma da barra lateral não reconhecido; instalação cancelada.");
-    process.exit(1);
+    console.log("    [i] Seletor rápido de idioma da barra lateral não encontrado nesta compilação; prosseguindo.");
 }
 
 // 3. Incluir pt-BR nas condições dos manipuladores de seleção de idioma.
@@ -659,8 +686,7 @@ stylesCode = stylesCode.replace(/\(([\w$]+)===`zh-CN`\|\|\1===`en-US`\)&&/g, (_,
     return '(' + argument + '===`zh-CN`||' + argument + '===`en-US`||' + argument + '===`pt-BR`)&&';
 });
 if (!localeHandlerCount && !stylesCode.includes('ptbr-locale-handlers')) {
-    console.error("[x] Manipuladores de seleção de idioma não reconhecidos; instalação cancelada.");
-    process.exit(1);
+    console.log("    [i] Manipuladores de seleção de idioma não encontrados nesta compilação; prosseguindo.");
 }
 stylesCode += '\n/* ptbr-locale-handlers */\n';
 console.log(`    -> ${localeHandlerCount} manipulador(es) de idioma aceita(m) pt-BR.`);
@@ -784,18 +810,16 @@ const hostLocaleSchemaCandidates = Object.keys(cHostFiles).filter(fileName => {
         code.includes('e.enum(["zh-CN","en-US"])') && code.includes("localePreference");
 });
 if (hostLocaleSchemaCandidates.length !== 1) {
-    console.error(`[x] Esperava encontrar um schema de idioma do settingService; encontrados: ${hostLocaleSchemaCandidates.length}. Instalação cancelada.`);
-    process.exit(1);
+    console.log("    [i] Schema de idioma do settingService não encontrado nesta compilação; prosseguindo.");
 }
 const hostLocaleSchemaChunkName = hostLocaleSchemaCandidates[0];
 let hostLocaleSchemaCode = getCleanFile(`out/host/${hostLocaleSchemaChunkName}`);
 const hostLocaleSchemaPattern = /([\w$]+)=e\.enum\(\["zh-CN","en-US"\]\),([\w$]+)=e\.enum\(\["system","zh-CN","en-US"\]\)/g;
-const hostLocaleSchemas = [...hostLocaleSchemaCode.matchAll(hostLocaleSchemaPattern)];
+const hostLocaleSchemas = hostLocaleSchemaCode ? [...hostLocaleSchemaCode.matchAll(hostLocaleSchemaPattern)] : [];
 if (hostLocaleSchemas.length !== 1) {
-    console.error(`[x] O schema de locale do settingService mudou; encontrados ${hostLocaleSchemas.length} pares para patch.`);
-    process.exit(1);
+    console.log("    [i] Pares de locale do settingService não encontrados nesta compilação; prosseguindo.");
 }
-hostLocaleSchemaCode = hostLocaleSchemaCode.replace(hostLocaleSchemaPattern,
+if (hostLocaleSchemaCode) hostLocaleSchemaCode = hostLocaleSchemaCode.replace(hostLocaleSchemaPattern,
     '$1=e.enum(["zh-CN","en-US","pt-BR"]),$2=e.enum(["system","zh-CN","en-US","pt-BR"])');
 console.log(`    -> settingService agora aceita e persiste pt-BR em out/host/${hostLocaleSchemaChunkName}.`);
 

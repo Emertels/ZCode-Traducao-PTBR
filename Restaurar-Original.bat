@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 title Restaurador PT-BR - ZCode - Emerson Teles
 cls
 echo ================================================================

@@ -274,7 +274,9 @@ if (Test-Path $settingsPath) {
         $settingsJson = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8).TrimStart([char]0xFEFF)
         $settings = $settingsJson | ConvertFrom-Json
         $settings | Add-Member -NotePropertyName locale -NotePropertyValue "pt-BR" -Force
+        $settings | Add-Member -NotePropertyName uiLocale -NotePropertyValue "pt-BR" -Force
         $settings | Add-Member -NotePropertyName localePreference -NotePropertyValue "pt-BR" -Force
+        $settings | Add-Member -NotePropertyName uiLocalePreference -NotePropertyValue "pt-BR" -Force
         $settingsJson = $settings | ConvertTo-Json -Depth 30
         [IO.File]::WriteAllText($settingsPath, $settingsJson, [System.Text.UTF8Encoding]::new($false))
         $savedSettings = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8).TrimStart([char]0xFEFF) | ConvertFrom-Json

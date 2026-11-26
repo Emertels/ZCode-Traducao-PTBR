@@ -1,3 +1,15 @@
+## v2.0.0 — ZCode 4.0.0 — 26/11/2026
+
+### Suporte Completo ao ZCode 4.0.0 (`patch-zcode4.cjs`)
+- Adicionado suporte dedicado à nova arquitetura do **ZCode 4.0.0** via `patch-zcode4.cjs`, acionado automaticamente pelo `patch-zcode.cjs` mantendo compatibilidade com versões 3.x e preservação do backup limpo em `_backups\4.0.0\app.asar`.
+- Catálogo completo atualizado de 8.847 para **9.731 termos** no `pt_dictionary.json`, cobrindo **100% (7.875 / 7.875 chaves)** do `IntlProvider` da versão 4.0.0 (ferramentas pré-instaladas, compartilhamentos, arquivamento, worktrees, extensões e permissões, editor de imagens, sincronização remota, entrada de voz e navegador integrado).
+- Adicionado suporte nativo a `"pt-BR"` nos validadores de idioma (`validation-*.js`, `out/host/chunk-*.js` e `out/main/chunk-*.js`), exibindo **"Português (Brasil)"** nas configurações de idioma e persistindo `uiLocale` / `uiLocalePreference`.
+- Traduzidos 100% dos menus nativos da barra de título, bandeja do sistema (Tray) e diálogo **"Sobre o ZCode"** com créditos `Tradução PT-BR: Emerson Teles`.
+
+## v1.5.1 — ZCode 3.17.1 — 26/11/2026
+
+- Adicionadas **11 novas entradas** ao `pt_dictionary.json`: `Only Archived` (*Apenas arquivadas*), `Only Automations` (*Apenas automações*), `Submit (↵)` (*Enviar (↵)*), `Submit` (*Enviar*), `Search shortcuts...` (*Pesquisar atalhos...*), `Fill` (*Preencher*), `No` (*Não*), `Yes, and always allow` (*Sim, e sempre permitir*), `Skip (Esc)` (*Pular (Esc)*), `Skip All` (*Pular tudo*) e `Add Context` (*Adicionar contexto*).
+
 ## v1.5.0 — ZCode 3.17.1 — 30/10/2026
 
 ### Traduções e varredura
